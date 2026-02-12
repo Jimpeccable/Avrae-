@@ -1,0 +1,333 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { 
+  Shield, Sword, Zap, Search, Wand2, RefreshCcw, 
+  ChevronRight, Heart, UserPlus, Flame, Trash2, 
+  Save, Plus, List, Activity, Crosshair, Power, Info
+} from 'lucide-react';
+
+// --- Utility: Storage ---
+const APP_ID = 'avrae-nat20-v1';
+const getStoredTargets = () => {
+  const saved = localStorage.getItem(`${APP_ID}-targets`);
+  return saved ? JSON.parse(saved) : [];
+};
+const saveStoredTargets = (targets) => {
+  localStorage.setItem(`${APP_ID}-targets`, JSON.stringify(targets));
+};
+
+// --- Metadata ---
+const PLAYER_ACTIONS = [
+  { id: 'attack', name: 'Attack', icon: Sword, syntax: '!a "{name}" {targets} {args}' },
+  { id: 'cast', name: 'Spell', icon: Wand2, syntax: '!cast "{name}" {targets} {args}' },
+  { id: 'check', name: 'Check', icon: Search, syntax: '!check {name} {args}' },
+  { id: 'save', name: 'Save', icon: Shield, syntax: '!save {name} {args}' },
+  { id: 'init', name: 'Init', icon: Zap, syntax: '!init join' },
+  { id: 'hp', name: 'HP', icon: Heart, syntax: '!hp {val}' },
+  { id: 'list', name: 'List', icon: List, syntax: '!init list' },
+];
+
+const ACTION_CATEGORIES = {
+  "Melee/Ranged": [
+    { name: 'Longsword', type: 'attack' },
+    { name: 'Rapier', type: 'attack' },
+    { name: 'Greatsword', type: 'attack' },
+    { name: 'Unarmed', type: 'attack' },
+    { name: 'Longbow', type: 'attack' },
+    { name: 'Shortbow', type: 'attack' },
+    { name: 'Dagger', type: 'attack' },
+  ],
+  "Spells": [
+    { name: 'E. Blast', type: 'cast' },
+    { name: 'Fireball', type: 'cast' },
+    { name: 'Magic Mis.', type: 'cast' },
+    { name: 'Guiding B.', type: 'cast' },
+    { name: 'S. Weapon', type: 'cast' },
+  ],
+  "Skills": [
+    { name: 'Athletics', type: 'check' },
+    { name: 'Perception', type: 'check' },
+    { name: 'Stealth', type: 'check' },
+    { name: 'Insight', type: 'check' },
+    { name: 'Invest.', type: 'check' },
+  ]
+};
+
+const DM_GOALS = [
+  { id: 'madd', name: 'Add Mob', icon: UserPlus, syntax: '!init madd "{name}" -n {count} {args}', desc: 'Add multiple monsters' },
+  { id: 'mattack', name: 'Mob Atk', icon: Flame, syntax: '!init attack "{monster}" "{attack}" {targets}', desc: 'Monster-specific attack' },
+  { id: 'effect', name: 'Effect', icon: Zap, syntax: '!init effect "{targets}" "{effect}" -d {duration}', desc: 'Add status/conditions' },
+  { id: 'hpmod', name: 'Set HP', icon: Heart, syntax: '!init hp "{targets}" {val}', desc: 'Adjust monster health' },
+  { id: 'end-init', name: 'End Combat', icon: Power, syntax: '!init end', desc: 'Wipe current initiative' },
+  { id: 'next', name: 'Next', icon: ChevronRight, syntax: '!init next', desc: 'Advance turn' },
+];
+
+const CommandOutput = ({ command }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    const textArea = document.createElement("textarea");
+    textArea.value = command;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="mt-4 bg-[#1a1a1a] border border-white/10 rounded overflow-hidden shadow-xl shrink-0">
+      <div className="flex justify-between items-center px-3 py-1.5 bg-white/5 border-b border-white/5">
+        <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-2">
+          <span className="h-1 w-1 rounded-full bg-red-600 animate-pulse" />
+          Terminal ready
+        </span>
+        <button 
+          onClick={handleCopy}
+          className={`px-3 py-1 rounded text-[10px] font-bold transition-all ${copied ? 'bg-red-600 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
+        >
+          {copied ? 'Copied!' : 'Copy to Discord'}
+        </button>
+      </div>
+      <div className="p-3 font-mono text-sm break-all text-white/90 bg-black/40">
+        <span className="text-red-600 mr-2">!</span>{command.startsWith('!') ? command.slice(1) : command}
+      </div>
+    </div>
+  );
+};
+
+export default function App() {
+  const [mode, setMode] = useState('player');
+  const [selectedAction, setSelectedAction] = useState(PLAYER_ACTIONS[0].id);
+  const [selectedGoal, setSelectedGoal] = useState(DM_GOALS[0].id);
+  
+  const [targetsRaw, setTargetsRaw] = useState('');
+  const [actionName, setActionName] = useState('');
+  const [adv, setAdv] = useState('normal'); 
+  const [args, setArgs] = useState('');
+  const [val, setVal] = useState('');
+
+  const [savedTargets, setSavedTargets] = useState([]);
+  useEffect(() => { setSavedTargets(getStoredTargets()); }, []);
+
+  const handleSaveTarget = () => {
+    if (!targetsRaw.trim()) return;
+    const updated = [...savedTargets, { id: Date.now(), name: targetsRaw }];
+    setSavedTargets(updated);
+    saveStoredTargets(updated);
+  };
+
+  const formattedTargets = useMemo(() => {
+    if (!targetsRaw.trim()) return "";
+    return targetsRaw.split(',').map(t => t.trim()).filter(t => t).map(t => `-t "${t}"`).join(' ');
+  }, [targetsRaw]);
+
+  const generatedCommand = useMemo(() => {
+    if (mode === 'player') {
+      const action = PLAYER_ACTIONS.find(a => a.id === selectedAction);
+      let cmd = action.syntax;
+      const advFlag = adv === 'adv' ? ' adv' : adv === 'dis' ? ' dis' : '';
+      const finalArgs = `${advFlag} ${args}`.trim();
+      switch(selectedAction) {
+        case 'attack': case 'cast': return cmd.replace('{name}', actionName || 'Action').replace('{targets}', formattedTargets).replace('{args}', finalArgs);
+        case 'check': case 'save': return cmd.replace('{name}', actionName || 'Skill').replace('{args}', finalArgs);
+        case 'hp': return cmd.replace('{val}', val || '0');
+        default: return cmd;
+      }
+    } else {
+      const goal = DM_GOALS.find(g => g.id === selectedGoal);
+      let cmd = goal.syntax;
+      switch(selectedGoal) {
+        case 'madd': return cmd.replace('{name}', actionName || 'Mob').replace('{count}', args || '1').replace('{args}', '');
+        case 'mattack': return cmd.replace('{monster}', actionName || 'Mob').replace('{attack}', 'Attack').replace('{targets}', formattedTargets);
+        case 'effect': return cmd.replace('{targets}', formattedTargets || '"Target"').replace('{effect}', actionName || 'Status').replace('{duration}', args || '1');
+        case 'hpmod': return cmd.replace('{targets}', formattedTargets || '"Target"').replace('{val}', val || '0');
+        default: return cmd;
+      }
+    }
+  }, [mode, selectedAction, selectedGoal, actionName, formattedTargets, adv, args, val]);
+
+  return (
+    <div className="h-screen bg-black text-white font-sans overflow-hidden flex flex-col selection:bg-red-600/30">
+      {/* Slim Header */}
+      <header className="h-14 flex items-center px-6 justify-between bg-black border-b border-white/5 shrink-0 shadow-lg z-10">
+        <div className="flex items-center gap-6">
+          <div className="flex flex-col">
+            <h1 className="text-xl font-black text-red-600 tracking-tighter uppercase leading-none">Avrae+</h1>
+            <span className="text-[8px] font-bold text-white/40 tracking-[.3em] uppercase">By Nat20</span>
+          </div>
+          <nav className="flex items-center gap-4">
+            {['player', 'dm'].map(m => (
+              <button 
+                key={m} 
+                onClick={() => setMode(m)} 
+                className={`text-[11px] font-bold uppercase tracking-widest transition-colors ${mode === m ? 'text-white border-b-2 border-red-600 pb-1' : 'text-white/40 hover:text-white'}`}
+              >
+                {m} Portal
+              </button>
+            ))}
+          </nav>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-[9px] font-bold text-white/20 uppercase hidden sm:block">D&D 5E Matrix</span>
+          <div className="w-6 h-6 rounded bg-red-600 flex items-center justify-center font-bold text-[10px] shadow-[0_0_10px_rgba(220,38,38,0.4)]">N20</div>
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-hidden p-4 grid grid-cols-12 gap-4">
+        
+        {/* Left Panel: Quick Actions & Inputs */}
+        <div className="col-span-8 flex flex-col gap-4 overflow-hidden">
+          
+          {/* Compressed Quick Clicks */}
+          {mode === 'player' && (
+            <div className="space-y-3 shrink-0">
+              {Object.entries(ACTION_CATEGORIES).map(([cat, actions]) => (
+                <div key={cat} className="flex flex-col gap-1">
+                  <h2 className="text-[9px] font-bold text-white/30 uppercase tracking-widest ml-1">{cat} Shortcuts</h2>
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5">
+                    {actions.map((act, i) => (
+                      <button 
+                        key={i} 
+                        onClick={() => { setSelectedAction(act.type); setActionName(act.name); }}
+                        className="flex-shrink-0 px-3 py-1.5 bg-[#141414] border border-white/5 rounded text-[10px] font-bold hover:bg-red-600/10 hover:border-red-600/40 transition-all text-white/70"
+                      >
+                        {act.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Control Center */}
+          <section className="bg-[#111] rounded border border-white/5 p-4 flex flex-col flex-1 shadow-2xl overflow-hidden">
+            <div className="flex justify-between items-center mb-4 shrink-0">
+              <div className="flex flex-col">
+                <h2 className="text-xs font-black uppercase tracking-widest text-white/60">Matrix Controls</h2>
+                <span className="text-[8px] text-white/30 uppercase">Configure Command Parameters</span>
+              </div>
+              <div className="flex gap-2">
+                 <button onClick={() => { setMode('dm'); setSelectedGoal('next'); }} className="px-2.5 py-1 bg-white/5 rounded text-[9px] font-bold hover:bg-white/10 flex items-center gap-1 transition-colors">
+                   <Activity size={10} className="text-red-600" />
+                   Quick DM Toggle
+                 </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 flex-1 overflow-hidden">
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between items-end mb-1.5">
+                    <label className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Target Selection</label>
+                    <span className="text-[8px] text-white/20 italic">Use commas for multiple</span>
+                  </div>
+                  <div className="relative group">
+                    <input 
+                      value={targetsRaw} 
+                      onChange={e => setTargetsRaw(e.target.value)}
+                      placeholder="e.g. Goblin 1, Orc 2"
+                      className="w-full bg-black border border-white/10 p-2.5 text-xs outline-none focus:border-red-600 rounded transition-all"
+                    />
+                    <button onClick={handleSaveTarget} title="Save to Registry" className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-red-600">
+                      <Save size={14} />
+                    </button>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5 max-h-12 overflow-y-auto no-scrollbar">
+                    {savedTargets.length === 0 && <span className="text-[8px] text-white/10 italic">Registry Empty</span>}
+                    {savedTargets.map(t => (
+                      <button key={t.id} onClick={() => setTargetsRaw(t.name)} className="text-[9px] font-bold bg-white/5 px-2 py-0.5 rounded border border-white/5 hover:border-red-600/40 transition-all text-white/40 hover:text-white truncate max-w-[100px]">
+                        {t.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-white/30 uppercase">Name/ID</label>
+                    <input value={actionName} onChange={e => setActionName(e.target.value)} placeholder="Action label" className="w-full bg-black border border-white/10 p-2 text-xs rounded outline-none focus:border-red-600" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[9px] font-bold text-white/30 uppercase">Roll MOD</label>
+                      <Info size={8} className="text-white/20" title="Advantage or Disadvantage" />
+                    </div>
+                    <div className="flex bg-black border border-white/10 rounded overflow-hidden">
+                      {['normal', 'adv', 'dis'].map(a => (
+                        <button key={a} onClick={() => setAdv(a)} className={`flex-1 py-1.5 text-[9px] font-black uppercase transition-colors ${adv === a ? 'bg-red-600 text-white' : 'text-white/20 hover:text-white/40'}`}>
+                          {a[0]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-white/30 uppercase">Extra Args / HP Mod</label>
+                  <input value={args || val} onChange={e => {setArgs(e.target.value); setVal(e.target.value);}} placeholder="e.g. -d 1d6 or -20" className="w-full bg-black border border-white/10 p-2 text-xs rounded outline-none focus:border-red-600" />
+                  <p className="text-[8px] text-white/20">Custom dice or damage adjustments</p>
+                </div>
+                <div className="p-3 bg-red-600/5 rounded border border-red-600/10 h-24 overflow-y-auto no-scrollbar flex flex-col">
+                  <span className="text-[8px] font-bold text-red-600 uppercase mb-1 block tracking-widest">Live Preview</span>
+                  <p className="text-[10px] text-white/50 leading-tight italic flex-1">{generatedCommand}</p>
+                </div>
+              </div>
+            </div>
+
+            <CommandOutput command={generatedCommand} />
+          </section>
+        </div>
+
+        {/* Right Panel: Side Controls */}
+        <div className="col-span-4 flex flex-col gap-4 overflow-hidden">
+          <div className="bg-[#111] border border-white/5 rounded p-4 shadow-xl shrink-0">
+             <div className="flex flex-col mb-3">
+               <h3 className="text-[10px] font-bold text-red-600 uppercase tracking-widest">Initiative Commands</h3>
+               <span className="text-[8px] text-white/20 uppercase tracking-tight">Active Combat Management</span>
+             </div>
+             <div className="grid grid-cols-2 gap-2">
+               {(mode === 'player' ? PLAYER_ACTIONS.slice(-3) : DM_GOALS).map(goal => (
+                 <button 
+                  key={goal.id}
+                  onClick={() => mode === 'player' ? setSelectedAction(goal.id) : setSelectedGoal(goal.id)}
+                  title={goal.desc || goal.name}
+                  className="group flex flex-col items-center justify-center p-2 bg-white/5 border border-white/5 rounded hover:border-red-600/40 transition-all gap-1.5"
+                 >
+                   <goal.icon size={14} className="text-white/40 group-hover:text-red-600" />
+                   <span className="text-[8px] font-black uppercase text-white/60 tracking-tighter">{goal.name}</span>
+                 </button>
+               ))}
+             </div>
+          </div>
+
+          <div className="bg-[#111] border border-white/5 rounded p-4 flex-1 overflow-hidden flex flex-col">
+             <div className="flex flex-col mb-3">
+               <h3 className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Cheat Sheet</h3>
+               <span className="text-[8px] text-white/15 uppercase">Common Command Flags</span>
+             </div>
+             <div className="space-y-1 text-[10px] text-white/50 overflow-y-auto pr-1 custom-scrollbar">
+                <div className="flex justify-between border-b border-white/5 pb-1 group hover:text-white transition-colors"><span>-h</span> <span className="text-white/20 uppercase text-[8px]">Private Roll</span></div>
+                <div className="flex justify-between border-b border-white/5 pb-1 group hover:text-white transition-colors"><span>-rr [n]</span> <span className="text-white/20 uppercase text-[8px]">Repeat N times</span></div>
+                <div className="flex justify-between border-b border-white/5 pb-1 group hover:text-white transition-colors"><span>-d "x"</span> <span className="text-white/20 uppercase text-[8px]">Bonus Damage</span></div>
+                <div className="flex justify-between border-b border-white/5 pb-1 group hover:text-white transition-colors"><span>-crit</span> <span className="text-white/20 uppercase text-[8px]">Force Critical</span></div>
+                <div className="flex justify-between border-b border-white/5 pb-1 group hover:text-white transition-colors"><span>-i</span> <span className="text-white/20 uppercase text-[8px]">Ignore Resists</span></div>
+                <div className="flex justify-between border-b border-white/5 pb-1 group hover:text-white transition-colors"><span>-phrase</span> <span className="text-white/20 uppercase text-[8px]">Custom Message</span></div>
+                <div className="flex justify-between border-b border-white/5 pb-1 group hover:text-white transition-colors"><span>-v</span> <span className="text-white/20 uppercase text-[8px]">Full Details</span></div>
+                <div className="flex justify-between border-b border-white/5 pb-1 group hover:text-white transition-colors"><span>-res [x]</span> <span className="text-white/20 uppercase text-[8px]">Override AC</span></div>
+             </div>
+          </div>
+        </div>
+      </main>
+      
+      {/* Visual Footer Tip */}
+      <footer className="h-6 px-6 flex items-center bg-red-600/5 border-t border-white/5 text-[9px] font-bold text-white/20 gap-4 shrink-0">
+        <div className="flex items-center gap-1"><Info size={10} /> <span>Tip: Comma separated targets auto-append "-t" flags</span></div>
+        <div className="flex-1 text-right text-red-600/40">AVRAE_NEXUS_MATRIX_ACTIVE</div>
+      </footer>
+    </div>
+  );
+}
