@@ -155,9 +155,111 @@
         .action-card:active {
             transform: translateY(0);
         }
+
+        /* Smooth mode transition */
+        .mode-transition {
+            opacity: 0;
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Target prompt glow */
+        .target-glow {
+            animation: targetPulse 2s ease-in-out;
+            box-shadow: 0 0 20px rgba(220, 38, 38, 0.6);
+        }
+
+        @keyframes targetPulse {
+            0%, 100% { box-shadow: 0 0 0 rgba(220, 38, 38, 0); }
+            50% { box-shadow: 0 0 20px rgba(220, 38, 38, 0.6); }
+        }
+
+        /* Action confirmation toast */
+        .action-toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: rgba(0, 0, 0, 0.95);
+            border: 1px solid rgba(220, 38, 38, 0.5);
+            border-radius: 8px;
+            padding: 12px 20px;
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s ease-out;
+            pointer-events: none;
+            box-shadow: 0 4px 20px rgba(220, 38, 38, 0.3);
+        }
+
+        body.light-theme .action-toast {
+            background: rgba(255, 255, 255, 0.98);
+            border-color: rgba(220, 38, 38, 0.5);
+        }
+
+        .action-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .action-toast-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .action-toast-icon {
+            width: 24px;
+            height: 24px;
+            background: rgba(220, 38, 38, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #dc2626;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .action-toast-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .action-toast-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #dc2626;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .action-toast-subtitle {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        body.light-theme .action-toast-subtitle {
+            color: rgba(0, 0, 0, 0.5);
+        }
     </style>
 </head>
 <body class="min-h-screen bg-black text-white overflow-x-hidden flex flex-col selection:bg-red-600/30 touch-manipulation">
+
+    <!-- Action Confirmation Toast -->
+    <div class="action-toast" id="action-toast">
+        <div class="action-toast-content">
+            <div class="action-toast-icon">✓</div>
+            <div class="action-toast-text">
+                <div class="action-toast-title" id="toast-title">Action Selected</div>
+                <div class="action-toast-subtitle" id="toast-subtitle">Choose your target below</div>
+            </div>
+        </div>
+    </div>
 
     <!-- Mobile Menu Overlay -->
     <div class="mobile-menu-overlay md:hidden" id="mobile-overlay" onclick="closeMobileMenu()"></div>
@@ -785,11 +887,39 @@
             const controlCenter = document.getElementById('control-center-section');
             const characterCardSection = document.getElementById('character-card-section');
             if (mode === 'character') {
-                if (controlCenter) controlCenter.classList.add('hidden');
-                if (characterCardSection) characterCardSection.classList.remove('hidden');
+                if (controlCenter) {
+                    controlCenter.style.opacity = '0';
+                    controlCenter.style.transition = 'opacity 0.3s ease-out';
+                    setTimeout(() => {
+                        controlCenter.classList.add('hidden');
+                        controlCenter.style.opacity = '1';
+                    }, 300);
+                }
+                if (characterCardSection) {
+                    characterCardSection.classList.remove('hidden');
+                    characterCardSection.style.opacity = '0';
+                    setTimeout(() => {
+                        characterCardSection.style.opacity = '1';
+                        characterCardSection.style.transition = 'opacity 0.3s ease-out';
+                    }, 50);
+                }
             } else {
-                if (controlCenter) controlCenter.classList.remove('hidden');
-                if (characterCardSection) characterCardSection.classList.add('hidden');
+                if (controlCenter) {
+                    controlCenter.classList.remove('hidden');
+                    controlCenter.style.opacity = '0';
+                    setTimeout(() => {
+                        controlCenter.style.opacity = '1';
+                        controlCenter.style.transition = 'opacity 0.3s ease-out';
+                    }, 50);
+                }
+                if (characterCardSection) {
+                    characterCardSection.style.opacity = '0';
+                    characterCardSection.style.transition = 'opacity 0.3s ease-out';
+                    setTimeout(() => {
+                        characterCardSection.classList.add('hidden');
+                        characterCardSection.style.opacity = '1';
+                    }, 300);
+                }
             }
 
             if (mode !== 'character') {
@@ -1382,9 +1512,28 @@
 
         // --- Character Card Rendering ---
         function useActionInCommand(actionName, actionType = 'attack') {
-            // Switch to player mode if not already
+            // Show toast notification
+            showActionToast(actionName, actionType);
+            
+            // Switch to player mode with smooth transition if needed
             if (currentMode !== 'player') {
-                setMode('player');
+                // Add transition class to control center
+                const controlCenter = document.getElementById('control-center-section');
+                const charCard = document.getElementById('character-card-section');
+                
+                // Fade out character card
+                charCard.style.opacity = '0';
+                charCard.style.transition = 'opacity 0.3s ease-out';
+                
+                setTimeout(() => {
+                    setMode('player');
+                    controlCenter.classList.add('mode-transition');
+                    
+                    // Remove transition class after animation
+                    setTimeout(() => {
+                        controlCenter.classList.remove('mode-transition');
+                    }, 400);
+                }, 300);
             }
             
             // Set the appropriate action type
@@ -1401,10 +1550,51 @@
             // Update the command output
             updateOutput();
             
-            // Scroll to the command output on mobile
+            // Apply glow to target input after mode switch
+            setTimeout(() => {
+                highlightTargetInput();
+            }, currentMode !== 'player' ? 600 : 100);
+            
+            // Smooth scroll to command output on mobile
             if (window.innerWidth < 768) {
-                document.querySelector('.bg-\\[\\#1a1a1a\\]').scrollIntoView({ behavior: 'smooth' });
+                setTimeout(() => {
+                    document.querySelector('.bg-\\[\\#1a1a1a\\]').scrollIntoView({ 
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                }, currentMode !== 'player' ? 700 : 200);
             }
+        }
+
+        function showActionToast(actionName, actionType) {
+            const toast = document.getElementById('action-toast');
+            const title = document.getElementById('toast-title');
+            const subtitle = document.getElementById('toast-subtitle');
+            
+            title.textContent = actionName;
+            subtitle.textContent = actionType === 'spell' ? 'Now select your target' : 'Choose who to target';
+            
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2500);
+        }
+
+        function highlightTargetInput() {
+            const targetInput = document.getElementById('targetsRaw');
+            const targetContainer = targetInput.parentElement;
+            
+            // Add glow effect
+            targetContainer.classList.add('target-glow');
+            
+            // Focus the input
+            targetInput.focus();
+            
+            // Remove glow after animation
+            setTimeout(() => {
+                targetContainer.classList.remove('target-glow');
+            }, 2000);
         }
 
         async function loadCharacterCard() {
