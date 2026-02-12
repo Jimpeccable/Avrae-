@@ -1,333 +1,363 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Shield, Sword, Zap, Search, Wand2, RefreshCcw, 
-  ChevronRight, Heart, UserPlus, Flame, Trash2, 
-  Save, Plus, List, Activity, Crosshair, Power, Info
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avrae Support by Nat20</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .mono { font-family: 'JetBrains+Mono', monospace; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(220,38,38,0.3); border-radius: 10px; }
+    </style>
+</head>
+<body class="h-screen bg-black text-white overflow-hidden flex flex-col selection:bg-red-600/30">
 
-// --- Utility: Storage ---
-const APP_ID = 'avrae-nat20-v1';
-const getStoredTargets = () => {
-  const saved = localStorage.getItem(`${APP_ID}-targets`);
-  return saved ? JSON.parse(saved) : [];
-};
-const saveStoredTargets = (targets) => {
-  localStorage.setItem(`${APP_ID}-targets`, JSON.stringify(targets));
-};
-
-// --- Metadata ---
-const PLAYER_ACTIONS = [
-  { id: 'attack', name: 'Attack', icon: Sword, syntax: '!a "{name}" {targets} {args}' },
-  { id: 'cast', name: 'Spell', icon: Wand2, syntax: '!cast "{name}" {targets} {args}' },
-  { id: 'check', name: 'Check', icon: Search, syntax: '!check {name} {args}' },
-  { id: 'save', name: 'Save', icon: Shield, syntax: '!save {name} {args}' },
-  { id: 'init', name: 'Init', icon: Zap, syntax: '!init join' },
-  { id: 'hp', name: 'HP', icon: Heart, syntax: '!hp {val}' },
-  { id: 'list', name: 'List', icon: List, syntax: '!init list' },
-];
-
-const ACTION_CATEGORIES = {
-  "Melee/Ranged": [
-    { name: 'Longsword', type: 'attack' },
-    { name: 'Rapier', type: 'attack' },
-    { name: 'Greatsword', type: 'attack' },
-    { name: 'Unarmed', type: 'attack' },
-    { name: 'Longbow', type: 'attack' },
-    { name: 'Shortbow', type: 'attack' },
-    { name: 'Dagger', type: 'attack' },
-  ],
-  "Spells": [
-    { name: 'E. Blast', type: 'cast' },
-    { name: 'Fireball', type: 'cast' },
-    { name: 'Magic Mis.', type: 'cast' },
-    { name: 'Guiding B.', type: 'cast' },
-    { name: 'S. Weapon', type: 'cast' },
-  ],
-  "Skills": [
-    { name: 'Athletics', type: 'check' },
-    { name: 'Perception', type: 'check' },
-    { name: 'Stealth', type: 'check' },
-    { name: 'Insight', type: 'check' },
-    { name: 'Invest.', type: 'check' },
-  ]
-};
-
-const DM_GOALS = [
-  { id: 'madd', name: 'Add Mob', icon: UserPlus, syntax: '!init madd "{name}" -n {count} {args}', desc: 'Add multiple monsters' },
-  { id: 'mattack', name: 'Mob Atk', icon: Flame, syntax: '!init attack "{monster}" "{attack}" {targets}', desc: 'Monster-specific attack' },
-  { id: 'effect', name: 'Effect', icon: Zap, syntax: '!init effect "{targets}" "{effect}" -d {duration}', desc: 'Add status/conditions' },
-  { id: 'hpmod', name: 'Set HP', icon: Heart, syntax: '!init hp "{targets}" {val}', desc: 'Adjust monster health' },
-  { id: 'end-init', name: 'End Combat', icon: Power, syntax: '!init end', desc: 'Wipe current initiative' },
-  { id: 'next', name: 'Next', icon: ChevronRight, syntax: '!init next', desc: 'Advance turn' },
-];
-
-const CommandOutput = ({ command }) => {
-  const [copied, setCopied] = useState(false);
-  const handleCopy = () => {
-    const textArea = document.createElement("textarea");
-    textArea.value = command;
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className="mt-4 bg-[#1a1a1a] border border-white/10 rounded overflow-hidden shadow-xl shrink-0">
-      <div className="flex justify-between items-center px-3 py-1.5 bg-white/5 border-b border-white/5">
-        <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-2">
-          <span className="h-1 w-1 rounded-full bg-red-600 animate-pulse" />
-          Terminal ready
-        </span>
-        <button 
-          onClick={handleCopy}
-          className={`px-3 py-1 rounded text-[10px] font-bold transition-all ${copied ? 'bg-red-600 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
-        >
-          {copied ? 'Copied!' : 'Copy to Discord'}
-        </button>
-      </div>
-      <div className="p-3 font-mono text-sm break-all text-white/90 bg-black/40">
-        <span className="text-red-600 mr-2">!</span>{command.startsWith('!') ? command.slice(1) : command}
-      </div>
-    </div>
-  );
-};
-
-export default function App() {
-  const [mode, setMode] = useState('player');
-  const [selectedAction, setSelectedAction] = useState(PLAYER_ACTIONS[0].id);
-  const [selectedGoal, setSelectedGoal] = useState(DM_GOALS[0].id);
-  
-  const [targetsRaw, setTargetsRaw] = useState('');
-  const [actionName, setActionName] = useState('');
-  const [adv, setAdv] = useState('normal'); 
-  const [args, setArgs] = useState('');
-  const [val, setVal] = useState('');
-
-  const [savedTargets, setSavedTargets] = useState([]);
-  useEffect(() => { setSavedTargets(getStoredTargets()); }, []);
-
-  const handleSaveTarget = () => {
-    if (!targetsRaw.trim()) return;
-    const updated = [...savedTargets, { id: Date.now(), name: targetsRaw }];
-    setSavedTargets(updated);
-    saveStoredTargets(updated);
-  };
-
-  const formattedTargets = useMemo(() => {
-    if (!targetsRaw.trim()) return "";
-    return targetsRaw.split(',').map(t => t.trim()).filter(t => t).map(t => `-t "${t}"`).join(' ');
-  }, [targetsRaw]);
-
-  const generatedCommand = useMemo(() => {
-    if (mode === 'player') {
-      const action = PLAYER_ACTIONS.find(a => a.id === selectedAction);
-      let cmd = action.syntax;
-      const advFlag = adv === 'adv' ? ' adv' : adv === 'dis' ? ' dis' : '';
-      const finalArgs = `${advFlag} ${args}`.trim();
-      switch(selectedAction) {
-        case 'attack': case 'cast': return cmd.replace('{name}', actionName || 'Action').replace('{targets}', formattedTargets).replace('{args}', finalArgs);
-        case 'check': case 'save': return cmd.replace('{name}', actionName || 'Skill').replace('{args}', finalArgs);
-        case 'hp': return cmd.replace('{val}', val || '0');
-        default: return cmd;
-      }
-    } else {
-      const goal = DM_GOALS.find(g => g.id === selectedGoal);
-      let cmd = goal.syntax;
-      switch(selectedGoal) {
-        case 'madd': return cmd.replace('{name}', actionName || 'Mob').replace('{count}', args || '1').replace('{args}', '');
-        case 'mattack': return cmd.replace('{monster}', actionName || 'Mob').replace('{attack}', 'Attack').replace('{targets}', formattedTargets);
-        case 'effect': return cmd.replace('{targets}', formattedTargets || '"Target"').replace('{effect}', actionName || 'Status').replace('{duration}', args || '1');
-        case 'hpmod': return cmd.replace('{targets}', formattedTargets || '"Target"').replace('{val}', val || '0');
-        default: return cmd;
-      }
-    }
-  }, [mode, selectedAction, selectedGoal, actionName, formattedTargets, adv, args, val]);
-
-  return (
-    <div className="h-screen bg-black text-white font-sans overflow-hidden flex flex-col selection:bg-red-600/30">
-      {/* Slim Header */}
-      <header className="h-14 flex items-center px-6 justify-between bg-black border-b border-white/5 shrink-0 shadow-lg z-10">
-        <div className="flex items-center gap-6">
-          <div className="flex flex-col">
-            <h1 className="text-xl font-black text-red-600 tracking-tighter uppercase leading-none">Avrae+</h1>
-            <span className="text-[8px] font-bold text-white/40 tracking-[.3em] uppercase">By Nat20</span>
-          </div>
-          <nav className="flex items-center gap-4">
-            {['player', 'dm'].map(m => (
-              <button 
-                key={m} 
-                onClick={() => setMode(m)} 
-                className={`text-[11px] font-bold uppercase tracking-widest transition-colors ${mode === m ? 'text-white border-b-2 border-red-600 pb-1' : 'text-white/40 hover:text-white'}`}
-              >
-                {m} Portal
-              </button>
-            ))}
-          </nav>
+    <!-- Header -->
+    <header class="h-14 flex items-center px-6 justify-between bg-black border-b border-white/5 shrink-0 shadow-lg z-10">
+        <div class="flex items-center gap-6">
+            <div class="flex flex-col">
+                <h1 class="text-xl font-black text-red-600 tracking-tighter uppercase leading-none">Avrae+</h1>
+                <span class="text-[8px] font-bold text-white/40 tracking-[.3em] uppercase">By Nat20</span>
+            </div>
+            <nav class="flex items-center gap-4">
+                <button onclick="setMode('player')" id="btn-player" class="text-[11px] font-bold uppercase tracking-widest transition-colors text-white border-b-2 border-red-600 pb-1">Player Portal</button>
+                <button onclick="setMode('dm')" id="btn-dm" class="text-[11px] font-bold uppercase tracking-widest transition-colors text-white/40 hover:text-white">DM Portal</button>
+            </nav>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-[9px] font-bold text-white/20 uppercase hidden sm:block">D&D 5E Matrix</span>
-          <div className="w-6 h-6 rounded bg-red-600 flex items-center justify-center font-bold text-[10px] shadow-[0_0_10px_rgba(220,38,38,0.4)]">N20</div>
+        <div class="flex items-center gap-3">
+            <span class="text-[9px] font-bold text-white/20 uppercase hidden sm:block">D&D 5E Matrix</span>
+            <div class="w-6 h-6 rounded bg-red-600 flex items-center justify-center font-bold text-[10px] shadow-[0_0_10px_rgba(220,38,38,0.4)]">N20</div>
         </div>
-      </header>
+    </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-hidden p-4 grid grid-cols-12 gap-4">
+    <!-- Main Content -->
+    <main class="flex-1 overflow-hidden p-4 grid grid-cols-12 gap-4">
         
-        {/* Left Panel: Quick Actions & Inputs */}
-        <div className="col-span-8 flex flex-col gap-4 overflow-hidden">
-          
-          {/* Compressed Quick Clicks */}
-          {mode === 'player' && (
-            <div className="space-y-3 shrink-0">
-              {Object.entries(ACTION_CATEGORIES).map(([cat, actions]) => (
-                <div key={cat} className="flex flex-col gap-1">
-                  <h2 className="text-[9px] font-bold text-white/30 uppercase tracking-widest ml-1">{cat} Shortcuts</h2>
-                  <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5">
-                    {actions.map((act, i) => (
-                      <button 
-                        key={i} 
-                        onClick={() => { setSelectedAction(act.type); setActionName(act.name); }}
-                        className="flex-shrink-0 px-3 py-1.5 bg-[#141414] border border-white/5 rounded text-[10px] font-bold hover:bg-red-600/10 hover:border-red-600/40 transition-all text-white/70"
-                      >
-                        {act.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Control Center */}
-          <section className="bg-[#111] rounded border border-white/5 p-4 flex flex-col flex-1 shadow-2xl overflow-hidden">
-            <div className="flex justify-between items-center mb-4 shrink-0">
-              <div className="flex flex-col">
-                <h2 className="text-xs font-black uppercase tracking-widest text-white/60">Matrix Controls</h2>
-                <span className="text-[8px] text-white/30 uppercase">Configure Command Parameters</span>
-              </div>
-              <div className="flex gap-2">
-                 <button onClick={() => { setMode('dm'); setSelectedGoal('next'); }} className="px-2.5 py-1 bg-white/5 rounded text-[9px] font-bold hover:bg-white/10 flex items-center gap-1 transition-colors">
-                   <Activity size={10} className="text-red-600" />
-                   Quick DM Toggle
-                 </button>
-              </div>
+        <!-- Left Panel -->
+        <div class="col-span-8 flex flex-col gap-4 overflow-hidden">
+            
+            <!-- Quick Clicks -->
+            <div id="player-shortcuts" class="space-y-3 shrink-0">
+                <!-- Categories injected by JS -->
             </div>
 
-            <div className="grid grid-cols-2 gap-4 flex-1 overflow-hidden">
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between items-end mb-1.5">
-                    <label className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Target Selection</label>
-                    <span className="text-[8px] text-white/20 italic">Use commas for multiple</span>
-                  </div>
-                  <div className="relative group">
-                    <input 
-                      value={targetsRaw} 
-                      onChange={e => setTargetsRaw(e.target.value)}
-                      placeholder="e.g. Goblin 1, Orc 2"
-                      className="w-full bg-black border border-white/10 p-2.5 text-xs outline-none focus:border-red-600 rounded transition-all"
-                    />
-                    <button onClick={handleSaveTarget} title="Save to Registry" className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-red-600">
-                      <Save size={14} />
+            <!-- Control Center -->
+            <section class="bg-[#111] rounded border border-white/5 p-4 flex flex-col flex-1 shadow-2xl overflow-hidden">
+                <div class="flex justify-between items-center mb-4 shrink-0">
+                    <div class="flex flex-col">
+                        <h2 class="text-xs font-black uppercase tracking-widest text-white/60">Matrix Controls</h2>
+                        <span class="text-[8px] text-white/30 uppercase">Configure Command Parameters</span>
+                    </div>
+                    <button onclick="setMode('dm')" class="px-2.5 py-1 bg-white/5 rounded text-[9px] font-bold hover:bg-white/10 flex items-center gap-1 transition-colors">
+                        <span class="w-2 h-2 rounded-full bg-red-600"></span>
+                        Quick DM Toggle
                     </button>
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-1.5 max-h-12 overflow-y-auto no-scrollbar">
-                    {savedTargets.length === 0 && <span className="text-[8px] text-white/10 italic">Registry Empty</span>}
-                    {savedTargets.map(t => (
-                      <button key={t.id} onClick={() => setTargetsRaw(t.name)} className="text-[9px] font-bold bg-white/5 px-2 py-0.5 rounded border border-white/5 hover:border-red-600/40 transition-all text-white/40 hover:text-white truncate max-w-[100px]">
-                        {t.name}
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-bold text-white/30 uppercase">Name/ID</label>
-                    <input value={actionName} onChange={e => setActionName(e.target.value)} placeholder="Action label" className="w-full bg-black border border-white/10 p-2 text-xs rounded outline-none focus:border-red-600" />
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[9px] font-bold text-white/30 uppercase">Roll MOD</label>
-                      <Info size={8} className="text-white/20" title="Advantage or Disadvantage" />
+                <div class="grid grid-cols-2 gap-4 flex-1 overflow-hidden">
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between items-end mb-1.5">
+                                <label class="text-[9px] font-bold text-white/30 uppercase tracking-widest">Target Selection</label>
+                                <span class="text-[8px] text-white/20 italic">Use commas for multiple</span>
+                            </div>
+                            <div class="relative">
+                                <input id="targetsRaw" type="text" placeholder="e.g. Goblin 1, Orc 2" 
+                                    class="w-full bg-black border border-white/10 p-2.5 text-xs outline-none focus:border-red-600 rounded transition-all">
+                                <button onclick="saveTarget()" class="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-red-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                </button>
+                            </div>
+                            <div id="target-registry" class="mt-2 flex flex-wrap gap-1.5 max-h-12 overflow-y-auto no-scrollbar">
+                                <!-- Saved targets injected by JS -->
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="space-y-1">
+                                <label class="text-[9px] font-bold text-white/30 uppercase">Name/ID</label>
+                                <input id="actionName" type="text" placeholder="Action label" class="w-full bg-black border border-white/10 p-2 text-xs rounded outline-none focus:border-red-600">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[9px] font-bold text-white/30 uppercase">Roll MOD</label>
+                                <div class="flex bg-black border border-white/10 rounded overflow-hidden">
+                                    <button onclick="setAdv('normal')" id="mod-normal" class="flex-1 py-1.5 text-[9px] font-black uppercase bg-red-600">N</button>
+                                    <button onclick="setAdv('adv')" id="mod-adv" class="flex-1 py-1.5 text-[9px] font-black uppercase text-white/20">A</button>
+                                    <button onclick="setAdv('dis')" id="mod-dis" class="flex-1 py-1.5 text-[9px] font-black uppercase text-white/20">D</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div className="flex bg-black border border-white/10 rounded overflow-hidden">
-                      {['normal', 'adv', 'dis'].map(a => (
-                        <button key={a} onClick={() => setAdv(a)} className={`flex-1 py-1.5 text-[9px] font-black uppercase transition-colors ${adv === a ? 'bg-red-600 text-white' : 'text-white/20 hover:text-white/40'}`}>
-                          {a[0]}
+
+                    <div class="space-y-4">
+                        <div class="space-y-1">
+                            <label class="text-[9px] font-bold text-white/30 uppercase">Extra Args / HP Mod</label>
+                            <input id="argsInput" type="text" placeholder="e.g. -d 1d6 or -20" class="w-full bg-black border border-white/10 p-2 text-xs rounded outline-none focus:border-red-600">
+                            <p class="text-[8px] text-white/20">Custom dice or damage adjustments</p>
+                        </div>
+                        <div class="p-3 bg-red-600/5 rounded border border-red-600/10 h-24 overflow-y-auto no-scrollbar flex flex-col">
+                            <span class="text-[8px] font-bold text-red-600 uppercase mb-1 block tracking-widest">Live Preview</span>
+                            <p id="live-preview" class="text-[10px] text-white/50 leading-tight italic flex-1">!init list</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Command Output Area -->
+                <div class="mt-4 bg-[#1a1a1a] border border-white/10 rounded overflow-hidden shadow-xl shrink-0">
+                    <div class="flex justify-between items-center px-3 py-1.5 bg-white/5 border-b border-white/5">
+                        <span class="text-[9px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-2">
+                            <span class="h-1 w-1 rounded-full bg-red-600 animate-pulse"></span>
+                            Terminal ready
+                        </span>
+                        <button onclick="copyCommand()" id="copy-btn" class="px-3 py-1 rounded bg-white/10 text-white hover:bg-white/20 text-[10px] font-bold transition-all">
+                            Copy to Discord
                         </button>
-                      ))}
                     </div>
-                  </div>
+                    <div id="final-output" class="p-3 mono text-sm break-all text-white/90 bg-black/40">
+                        <span class="text-red-600 mr-2">!</span>init list
+                    </div>
                 </div>
-              </div>
+            </section>
+        </div>
 
-              <div className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-white/30 uppercase">Extra Args / HP Mod</label>
-                  <input value={args || val} onChange={e => {setArgs(e.target.value); setVal(e.target.value);}} placeholder="e.g. -d 1d6 or -20" className="w-full bg-black border border-white/10 p-2 text-xs rounded outline-none focus:border-red-600" />
-                  <p className="text-[8px] text-white/20">Custom dice or damage adjustments</p>
+        <!-- Right Panel -->
+        <div class="col-span-4 flex flex-col gap-4 overflow-hidden">
+            <div class="bg-[#111] border border-white/5 rounded p-4 shadow-xl shrink-0">
+                <div class="flex flex-col mb-3">
+                    <h3 class="text-[10px] font-bold text-red-600 uppercase tracking-widest">Initiative Commands</h3>
+                    <span class="text-[8px] text-white/20 uppercase tracking-tight">Active Combat Management</span>
                 </div>
-                <div className="p-3 bg-red-600/5 rounded border border-red-600/10 h-24 overflow-y-auto no-scrollbar flex flex-col">
-                  <span className="text-[8px] font-bold text-red-600 uppercase mb-1 block tracking-widest">Live Preview</span>
-                  <p className="text-[10px] text-white/50 leading-tight italic flex-1">{generatedCommand}</p>
+                <div id="initiative-grid" class="grid grid-cols-2 gap-2">
+                    <!-- Buttons injected by JS -->
                 </div>
-              </div>
             </div>
 
-            <CommandOutput command={generatedCommand} />
-          </section>
+            <div class="bg-[#111] border border-white/5 rounded p-4 flex-1 overflow-hidden flex flex-col">
+                <div class="flex flex-col mb-3">
+                    <h3 class="text-[9px] font-bold text-white/30 uppercase tracking-widest">Cheat Sheet</h3>
+                    <span class="text-[8px] text-white/15 uppercase">Common Command Flags</span>
+                </div>
+                <div id="cheat-sheet" class="space-y-1 text-[10px] text-white/50 overflow-y-auto pr-1 custom-scrollbar">
+                    <!-- Flags injected by JS -->
+                </div>
+            </div>
         </div>
+    </main>
 
-        {/* Right Panel: Side Controls */}
-        <div className="col-span-4 flex flex-col gap-4 overflow-hidden">
-          <div className="bg-[#111] border border-white/5 rounded p-4 shadow-xl shrink-0">
-             <div className="flex flex-col mb-3">
-               <h3 className="text-[10px] font-bold text-red-600 uppercase tracking-widest">Initiative Commands</h3>
-               <span className="text-[8px] text-white/20 uppercase tracking-tight">Active Combat Management</span>
-             </div>
-             <div className="grid grid-cols-2 gap-2">
-               {(mode === 'player' ? PLAYER_ACTIONS.slice(-3) : DM_GOALS).map(goal => (
-                 <button 
-                  key={goal.id}
-                  onClick={() => mode === 'player' ? setSelectedAction(goal.id) : setSelectedGoal(goal.id)}
-                  title={goal.desc || goal.name}
-                  className="group flex flex-col items-center justify-center p-2 bg-white/5 border border-white/5 rounded hover:border-red-600/40 transition-all gap-1.5"
-                 >
-                   <goal.icon size={14} className="text-white/40 group-hover:text-red-600" />
-                   <span className="text-[8px] font-black uppercase text-white/60 tracking-tighter">{goal.name}</span>
-                 </button>
-               ))}
-             </div>
-          </div>
-
-          <div className="bg-[#111] border border-white/5 rounded p-4 flex-1 overflow-hidden flex flex-col">
-             <div className="flex flex-col mb-3">
-               <h3 className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Cheat Sheet</h3>
-               <span className="text-[8px] text-white/15 uppercase">Common Command Flags</span>
-             </div>
-             <div className="space-y-1 text-[10px] text-white/50 overflow-y-auto pr-1 custom-scrollbar">
-                <div className="flex justify-between border-b border-white/5 pb-1 group hover:text-white transition-colors"><span>-h</span> <span className="text-white/20 uppercase text-[8px]">Private Roll</span></div>
-                <div className="flex justify-between border-b border-white/5 pb-1 group hover:text-white transition-colors"><span>-rr [n]</span> <span className="text-white/20 uppercase text-[8px]">Repeat N times</span></div>
-                <div className="flex justify-between border-b border-white/5 pb-1 group hover:text-white transition-colors"><span>-d "x"</span> <span className="text-white/20 uppercase text-[8px]">Bonus Damage</span></div>
-                <div className="flex justify-between border-b border-white/5 pb-1 group hover:text-white transition-colors"><span>-crit</span> <span className="text-white/20 uppercase text-[8px]">Force Critical</span></div>
-                <div className="flex justify-between border-b border-white/5 pb-1 group hover:text-white transition-colors"><span>-i</span> <span className="text-white/20 uppercase text-[8px]">Ignore Resists</span></div>
-                <div className="flex justify-between border-b border-white/5 pb-1 group hover:text-white transition-colors"><span>-phrase</span> <span className="text-white/20 uppercase text-[8px]">Custom Message</span></div>
-                <div className="flex justify-between border-b border-white/5 pb-1 group hover:text-white transition-colors"><span>-v</span> <span className="text-white/20 uppercase text-[8px]">Full Details</span></div>
-                <div className="flex justify-between border-b border-white/5 pb-1 group hover:text-white transition-colors"><span>-res [x]</span> <span className="text-white/20 uppercase text-[8px]">Override AC</span></div>
-             </div>
-          </div>
+    <footer class="h-6 px-6 flex items-center bg-red-600/5 border-t border-white/5 text-[9px] font-bold text-white/20 gap-4 shrink-0">
+        <div class="flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            <span>Tip: Comma separated targets auto-append "-t" flags</span>
         </div>
-      </main>
-      
-      {/* Visual Footer Tip */}
-      <footer className="h-6 px-6 flex items-center bg-red-600/5 border-t border-white/5 text-[9px] font-bold text-white/20 gap-4 shrink-0">
-        <div className="flex items-center gap-1"><Info size={10} /> <span>Tip: Comma separated targets auto-append "-t" flags</span></div>
-        <div className="flex-1 text-right text-red-600/40">AVRAE_NEXUS_MATRIX_ACTIVE</div>
-      </footer>
-    </div>
-  );
-}
+        <div class="flex-1 text-right text-red-600/40">AVRAE_HTML_MATRIX_V1</div>
+    </footer>
+
+    <script>
+        // --- Data ---
+        const PLAYER_ACTIONS = [
+            { id: 'attack', name: 'Attack', syntax: '!a "{name}" {targets} {args}' },
+            { id: 'cast', name: 'Spell', syntax: '!cast "{name}" {targets} {args}' },
+            { id: 'check', name: 'Check', syntax: '!check {name} {args}' },
+            { id: 'save', name: 'Save', syntax: '!save {name} {args}' },
+            { id: 'init', name: 'Join Init', syntax: '!init join' },
+            { id: 'hp', name: 'Set HP', syntax: '!hp {val}' },
+            { id: 'list', name: 'Show List', syntax: '!init list' },
+        ];
+
+        const DM_GOALS = [
+            { id: 'madd', name: 'Add Mob', syntax: '!init madd "{name}" -n {count} {args}', desc: 'Add multiple monsters' },
+            { id: 'mattack', name: 'Mob Atk', syntax: '!init attack "{monster}" "{attack}" {targets}', desc: 'Monster-specific attack' },
+            { id: 'effect', name: 'Effect', syntax: '!init effect "{targets}" "{effect}" -d {duration}', desc: 'Add status/conditions' },
+            { id: 'hpmod', name: 'Set HP', syntax: '!init hp "{targets}" {val}', desc: 'Adjust monster health' },
+            { id: 'end-init', name: 'End Combat', syntax: '!init end', desc: 'Wipe current initiative' },
+            { id: 'next', name: 'Next Turn', syntax: '!init next', desc: 'Advance turn' },
+        ];
+
+        const ACTION_CATEGORIES = {
+            "Melee/Ranged": ["Longsword", "Rapier", "Greatsword", "Unarmed", "Longbow", "Shortbow", "Dagger"],
+            "Spells": ["E. Blast", "Fireball", "Magic Mis.", "Guiding B.", "S. Weapon"],
+            "Skills": ["Athletics", "Perception", "Stealth", "Insight", "Invest."]
+        };
+
+        const CHEAT_SHEET = [
+            ["-h", "Private Roll"],
+            ["-rr [n]", "Repeat N times"],
+            ["-d \"x\"", "Bonus Damage"],
+            ["-crit", "Force Critical"],
+            ["-i", "Ignore Resists"],
+            ["-phrase", "Custom Message"],
+            ["-v", "Full Details"],
+            ["-res [x]", "Override AC"]
+        ];
+
+        // --- State ---
+        let currentMode = 'player';
+        let selectedActionId = 'attack';
+        let selectedAdv = 'normal';
+        let savedTargets = JSON.parse(localStorage.getItem('avrae-targets') || '[]');
+
+        // --- Core Functions ---
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('btn-player').className = mode === 'player' ? 'text-[11px] font-bold uppercase tracking-widest transition-colors text-white border-b-2 border-red-600 pb-1' : 'text-[11px] font-bold uppercase tracking-widest transition-colors text-white/40 hover:text-white';
+            document.getElementById('btn-dm').className = mode === 'dm' ? 'text-[11px] font-bold uppercase tracking-widest transition-colors text-white border-b-2 border-red-600 pb-1' : 'text-[11px] font-bold uppercase tracking-widest transition-colors text-white/40 hover:text-white';
+            
+            document.getElementById('player-shortcuts').style.display = mode === 'player' ? 'block' : 'none';
+            selectedActionId = mode === 'player' ? 'attack' : 'madd';
+            renderShortcuts();
+            renderInitiativeGrid();
+            updateOutput();
+        }
+
+        function setAdv(mod) {
+            selectedAdv = mod;
+            ['normal', 'adv', 'dis'].forEach(m => {
+                document.getElementById(`mod-${m}`).className = `flex-1 py-1.5 text-[9px] font-black uppercase transition-colors ${selectedAdv === m ? 'bg-red-600 text-white' : 'text-white/20 hover:text-white/40'}`;
+            });
+            updateOutput();
+        }
+
+        function saveTarget() {
+            const input = document.getElementById('targetsRaw').value.trim();
+            if(!input) return;
+            if(!savedTargets.includes(input)) {
+                savedTargets.push(input);
+                localStorage.setItem('avrae-targets', JSON.stringify(savedTargets));
+                renderRegistry();
+            }
+        }
+
+        function applyTarget(name) {
+            document.getElementById('targetsRaw').value = name;
+            updateOutput();
+        }
+
+        function renderRegistry() {
+            const container = document.getElementById('target-registry');
+            container.innerHTML = savedTargets.length ? '' : '<span class="text-[8px] text-white/10 italic">Registry Empty</span>';
+            savedTargets.forEach(t => {
+                const btn = document.createElement('button');
+                btn.className = "text-[9px] font-bold bg-white/5 px-2 py-0.5 rounded border border-white/5 hover:border-red-600/40 transition-all text-white/40 hover:text-white truncate max-w-[100px]";
+                btn.textContent = t;
+                btn.onclick = () => applyTarget(t);
+                container.appendChild(btn);
+            });
+        }
+
+        function renderShortcuts() {
+            const container = document.getElementById('player-shortcuts');
+            container.innerHTML = '';
+            for (const [cat, items] of Object.entries(ACTION_CATEGORIES)) {
+                const wrap = document.createElement('div');
+                wrap.className = "flex flex-col gap-1";
+                wrap.innerHTML = `<h2 class="text-[9px] font-bold text-white/30 uppercase tracking-widest ml-1">${cat} Shortcuts</h2>`;
+                const scrollWrap = document.createElement('div');
+                scrollWrap.className = "flex gap-2 overflow-x-auto no-scrollbar pb-0.5";
+                items.forEach(item => {
+                    const btn = document.createElement('button');
+                    btn.className = "flex-shrink-0 px-3 py-1.5 bg-[#141414] border border-white/5 rounded text-[10px] font-bold hover:bg-red-600/10 hover:border-red-600/40 transition-all text-white/70";
+                    btn.textContent = item;
+                    btn.onclick = () => {
+                        document.getElementById('actionName').value = item;
+                        selectedActionId = cat === "Skills" ? 'check' : (cat === "Spells" ? 'cast' : 'attack');
+                        updateOutput();
+                    };
+                    scrollWrap.appendChild(btn);
+                });
+                wrap.appendChild(scrollWrap);
+                container.appendChild(wrap);
+            }
+        }
+
+        function renderInitiativeGrid() {
+            const container = document.getElementById('initiative-grid');
+            container.innerHTML = '';
+            const list = currentMode === 'player' ? PLAYER_ACTIONS.slice(-3) : DM_GOALS;
+            list.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = "group flex flex-col items-center justify-center p-2 bg-white/5 border border-white/5 rounded hover:border-red-600/40 transition-all gap-1.5";
+                btn.title = item.desc || '';
+                btn.innerHTML = `<span class="text-[8px] font-black uppercase text-white/60 tracking-tighter">${item.name}</span>`;
+                btn.onclick = () => { selectedActionId = item.id; updateOutput(); };
+                container.appendChild(btn);
+            });
+        }
+
+        function updateOutput() {
+            const targetsRaw = document.getElementById('targetsRaw').value.trim();
+            const actionName = document.getElementById('actionName').value.trim();
+            const args = document.getElementById('argsInput').value.trim();
+            
+            const formattedTargets = targetsRaw.split(',').map(t => t.trim()).filter(t => t).map(t => `-t "${t}"`).join(' ');
+            const advFlag = selectedAdv === 'adv' ? ' adv' : selectedAdv === 'dis' ? ' dis' : '';
+            const finalArgs = `${advFlag} ${args}`.trim();
+
+            let cmd = "";
+            if (currentMode === 'player') {
+                const action = PLAYER_ACTIONS.find(a => a.id === selectedActionId);
+                cmd = action.syntax;
+                switch(selectedActionId) {
+                    case 'attack': case 'cast': cmd = cmd.replace('{name}', actionName || 'Action').replace('{targets}', formattedTargets).replace('{args}', finalArgs); break;
+                    case 'check': case 'save': cmd = cmd.replace('{name}', actionName || 'Skill').replace('{args}', finalArgs); break;
+                    case 'hp': cmd = cmd.replace('{val}', args || '0'); break;
+                }
+            } else {
+                const goal = DM_GOALS.find(g => g.id === selectedActionId);
+                cmd = goal.syntax;
+                switch(selectedActionId) {
+                    case 'madd': cmd = cmd.replace('{name}', actionName || 'Mob').replace('{count}', args || '1').replace('{args}', ''); break;
+                    case 'mattack': cmd = cmd.replace('{monster}', actionName || 'Mob').replace('{attack}', 'Attack').replace('{targets}', formattedTargets); break;
+                    case 'effect': cmd = cmd.replace('{targets}', formattedTargets || '"Target"').replace('{effect}', actionName || 'Status').replace('{duration}', args || '1'); break;
+                    case 'hpmod': cmd = cmd.replace('{targets}', formattedTargets || '"Target"').replace('{val}', args || '0'); break;
+                }
+            }
+
+            document.getElementById('live-preview').textContent = cmd;
+            document.getElementById('final-output').innerHTML = `<span class="text-red-600 mr-2">!</span>${cmd.startsWith('!') ? cmd.slice(1) : cmd}`;
+        }
+
+        function copyCommand() {
+            const text = document.getElementById('live-preview').textContent;
+            const btn = document.getElementById('copy-btn');
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            const original = btn.textContent;
+            btn.textContent = 'Copied!';
+            btn.classList.add('bg-red-600');
+            setTimeout(() => {
+                btn.textContent = original;
+                btn.classList.remove('bg-red-600');
+            }, 2000);
+        }
+
+        // Init
+        document.getElementById('targetsRaw').oninput = updateOutput;
+        document.getElementById('actionName').oninput = updateOutput;
+        document.getElementById('argsInput').oninput = updateOutput;
+
+        const cheatContainer = document.getElementById('cheat-sheet');
+        CHEAT_SHEET.forEach(([flag, desc]) => {
+            const row = document.createElement('div');
+            row.className = "flex justify-between border-b border-white/5 pb-1 group hover:text-white transition-colors";
+            row.innerHTML = `<span>${flag}</span> <span class="text-white/20 uppercase text-[8px]">${desc}</span>`;
+            cheatContainer.appendChild(row);
+        });
+
+        renderRegistry();
+        renderShortcuts();
+        renderInitiativeGrid();
+        updateOutput();
+    </script>
+</body>
+</html>
