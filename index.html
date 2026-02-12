@@ -4,69 +4,284 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Avrae Support by Nat20</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,5 95,35 95,65 50,95 5,65 5,35' fill='%23dc2626' stroke='%23fff' stroke-width='3'/><text x='50' y='65' font-size='45' font-weight='bold' text-anchor='middle' fill='%23fff'>20</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .mono { font-family: 'JetBrains+Mono', monospace; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(220,38,38,0.3); border-radius: 10px; }
+        
+        /* Light theme */
+        body.light-theme { background: #f8f9fa; color: #1a1a1a; }
+        body.light-theme .bg-black { background: #ffffff; }
+        body.light-theme .bg-\[\#111\] { background: #f1f3f5; }
+        body.light-theme .bg-\[\#141414\] { background: #e9ecef; }
+        body.light-theme .bg-\[\#1a1a1a\] { background: #ffffff; }
+        body.light-theme .text-white { color: #1a1a1a; }
+        body.light-theme .text-white\/90 { color: #2d2d2d; }
+        body.light-theme .text-white\/80 { color: #404040; }
+        body.light-theme .text-white\/70 { color: #525252; }
+        body.light-theme .text-white\/60 { color: #666666; }
+        body.light-theme .text-white\/50 { color: #737373; }
+        body.light-theme .text-white\/40 { color: #8c8c8c; }
+        body.light-theme .text-white\/30 { color: #a3a3a3; }
+        body.light-theme .text-white\/20 { color: #bfbfbf; }
+        body.light-theme .text-white\/10 { color: #d4d4d4; }
+        body.light-theme .border-white\/5 { border-color: rgba(0,0,0,0.08); }
+        body.light-theme .border-white\/10 { border-color: rgba(0,0,0,0.12); }
+        body.light-theme .bg-white\/5 { background-color: rgba(0,0,0,0.03); }
+        body.light-theme .bg-white\/10 { background-color: rgba(0,0,0,0.05); }
+        body.light-theme .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(220,38,38,0.4); }
+        
+        /* Tooltip */
+        .tooltip { position: relative; }
+        .tooltip-text {
+            visibility: hidden;
+            position: absolute;
+            z-index: 100;
+            background: rgba(0,0,0,0.95);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            line-height: 1.4;
+            width: 220px;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+        body.light-theme .tooltip-text {
+            background: rgba(0,0,0,0.9);
+            color: white;
+        }
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: rgba(0,0,0,0.95) transparent transparent transparent;
+        }
+        
+        /* Mobile menu */
+        @media (max-width: 768px) {
+            .mobile-menu-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.8);
+                z-index: 40;
+                opacity: 0;
+                visibility: hidden;
+                transition: opacity 0.3s, visibility 0.3s;
+            }
+            .mobile-menu-overlay.active {
+                opacity: 1;
+                visibility: visible;
+            }
+            .mobile-menu {
+                position: fixed;
+                top: 0;
+                right: -100%;
+                width: 85%;
+                max-width: 400px;
+                height: 100%;
+                background: #111;
+                z-index: 50;
+                transition: right 0.3s;
+                overflow-y: auto;
+            }
+            body.light-theme .mobile-menu {
+                background: #f1f3f5;
+            }
+            .mobile-menu.active {
+                right: 0;
+            }
+        }
+        
+        /* Keyboard shortcut hints */
+        .kbd {
+            display: inline-block;
+            padding: 2px 6px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 3px;
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            margin: 0 2px;
+        }
+        body.light-theme .kbd {
+            background: rgba(0,0,0,0.05);
+            border-color: rgba(0,0,0,0.15);
+        }
     </style>
 </head>
-<body class="h-screen bg-black text-white overflow-hidden flex flex-col selection:bg-red-600/30">
+<body class="h-screen bg-black text-white overflow-hidden flex flex-col selection:bg-red-600/30 touch-manipulation">
+
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu-overlay md:hidden" id="mobile-overlay" onclick="closeMobileMenu()"></div>
+    
+    <!-- Mobile Menu -->
+    <div class="mobile-menu md:hidden" id="mobile-menu">
+        <div class="p-4 border-b border-white/5">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-sm font-bold text-white/80">Menu</h2>
+                <button onclick="closeMobileMenu()" class="text-2xl text-white/60">&times;</button>
+            </div>
+        </div>
+        <div id="mobile-menu-content" class="p-4"></div>
+    </div>
+
+    <!-- Create Profile Modal -->
+    <div id="profile-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#111] border border-white/10 rounded-lg p-6 max-w-md w-full shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-green-500 uppercase tracking-widest">Create Profile</h3>
+                <button onclick="closeProfileModal()" class="text-2xl text-white/40 hover:text-white">&times;</button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-white/60 uppercase tracking-wider block mb-2">Profile Name *</label>
+                    <input id="modal-profile-name" type="text" placeholder="e.g. Goblin Pack" 
+                        class="w-full bg-black border border-white/10 p-3 text-sm rounded outline-none focus:border-green-600 transition-all">
+                </div>
+                
+                <div>
+                    <label class="text-xs font-bold text-white/60 uppercase tracking-wider block mb-2">Description (Optional)</label>
+                    <textarea id="modal-profile-description" placeholder="e.g. 4 goblins with standard weapons" 
+                        class="w-full bg-black border border-white/10 p-3 text-sm rounded outline-none focus:border-green-600 transition-all resize-none h-20"></textarea>
+                </div>
+                
+                <div class="text-xs text-white/40 bg-white/5 p-3 rounded">
+                    <p class="mb-1"><strong>Current Action:</strong> <span id="modal-current-action" class="text-white/60">None</span></p>
+                    <p><strong>Current Stats:</strong> <span id="modal-current-stats" class="text-white/60">None</span></p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeProfileModal()" class="flex-1 py-2.5 bg-white/5 border border-white/10 rounded text-sm font-bold uppercase hover:bg-white/10 transition-all">
+                    Cancel
+                </button>
+                <button onclick="saveProfileFromModal()" class="flex-1 py-2.5 bg-green-600 hover:bg-green-700 rounded text-sm font-bold uppercase transition-all">
+                    Create Profile
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Header -->
-    <header class="h-14 flex items-center px-6 justify-between bg-black border-b border-white/5 shrink-0 shadow-lg z-10">
-        <div class="flex items-center gap-6">
+    <header class="h-14 flex items-center px-4 md:px-6 justify-between bg-black border-b border-white/5 shrink-0 shadow-lg z-10">
+        <div class="flex items-center gap-3 md:gap-6">
             <div class="flex flex-col">
-                <h1 class="text-xl font-black text-red-600 tracking-tighter uppercase leading-none">Avrae+</h1>
-                <span class="text-[8px] font-bold text-white/40 tracking-[.3em] uppercase">By Nat20</span>
+                <h1 class="text-lg md:text-xl font-black text-red-600 tracking-tighter uppercase leading-none">Avrae+</h1>
+                <span class="text-[7px] md:text-[8px] font-bold text-white/40 tracking-[.3em] uppercase">By Nat20</span>
             </div>
-            <nav class="flex items-center gap-4">
+            <nav class="hidden md:flex items-center gap-4">
                 <button onclick="setMode('player')" id="btn-player" class="text-[11px] font-bold uppercase tracking-widest transition-colors text-white border-b-2 border-red-600 pb-1">Player Portal</button>
                 <button onclick="setMode('dm')" id="btn-dm" class="text-[11px] font-bold uppercase tracking-widest transition-colors text-white/40 hover:text-white">DM Portal</button>
             </nav>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 md:gap-3">
+            <!-- Theme Toggle -->
+            <button onclick="toggleTheme()" class="p-2 rounded hover:bg-white/10 transition-all tooltip" id="theme-toggle">
+                <svg id="theme-icon-dark" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+                <svg id="theme-icon-light" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                <span class="tooltip-text">Toggle theme</span>
+            </button>
+            
+            <!-- Search Toggle -->
+            <button onclick="toggleSearch()" class="p-2 rounded hover:bg-white/10 transition-all tooltip md:hidden">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span class="tooltip-text">Search commands</span>
+            </button>
+            
+            <!-- Mobile Menu Button -->
+            <button onclick="toggleMobileMenu()" class="md:hidden p-2 rounded hover:bg-white/10 transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+            
             <span class="text-[9px] font-bold text-white/20 uppercase hidden sm:block">D&D 5E Matrix</span>
             <div class="w-6 h-6 rounded bg-red-600 flex items-center justify-center font-bold text-[10px] shadow-[0_0_10px_rgba(220,38,38,0.4)]">N20</div>
         </div>
     </header>
 
+    <!-- Search Bar (collapsible on mobile) -->
+    <div id="search-bar" class="hidden md:block border-b border-white/5 bg-black/50 backdrop-blur-sm shrink-0">
+        <div class="px-4 py-2 flex gap-2">
+            <input 
+                id="search-input" 
+                type="text" 
+                placeholder="Search actions, commands, profiles... (Ctrl+K)"
+                class="flex-1 bg-white/5 border border-white/10 px-3 py-2 text-xs rounded outline-none focus:border-red-600 transition-all"
+                oninput="handleSearch()"
+            >
+            <button onclick="clearSearch()" class="px-3 py-2 bg-white/5 border border-white/10 rounded text-[10px] font-bold uppercase hover:bg-red-600 transition-all">
+                Clear
+            </button>
+        </div>
+    </div>
+
     <!-- Main Content -->
-    <main class="flex-1 overflow-hidden p-4 grid grid-cols-12 gap-4">
+    <main class="flex-1 overflow-hidden p-2 md:p-4 grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4">
         
         <!-- Left Panel -->
-        <div class="col-span-8 flex flex-col gap-4 overflow-hidden">
+        <div class="md:col-span-8 flex flex-col gap-2 md:gap-4 overflow-hidden">
             
             <!-- Quick Clicks -->
-            <div id="quick-clicks-container" class="space-y-3 shrink-0">
+            <div id="quick-clicks-container" class="space-y-2 md:space-y-3 shrink-0 max-h-[120px] md:max-h-[140px] overflow-y-auto custom-scrollbar">
                 <!-- Categories injected by JS -->
             </div>
 
             <!-- Control Center -->
-            <section class="bg-[#111] rounded border border-white/5 p-4 flex flex-col flex-1 shadow-2xl overflow-hidden">
-                <div class="flex justify-between items-center mb-4 shrink-0">
+            <section class="bg-[#111] rounded border border-white/5 p-3 md:p-4 flex flex-col flex-1 shadow-2xl overflow-hidden min-h-0">
+                <div class="flex justify-between items-center mb-3 md:mb-4 shrink-0">
                     <div class="flex flex-col">
-                        <h2 class="text-xs font-black uppercase tracking-widest text-white/60">Matrix Controls</h2>
-                        <span class="text-[8px] text-white/30 uppercase">Configure Command Parameters</span>
+                        <h2 class="text-xs font-black uppercase tracking-widest text-white/60">Build Your Command</h2>
+                        <span class="text-[8px] text-white/30 uppercase hidden md:block">Configure Command Parameters</span>
+                    </div>
+                    <!-- Mode selector for mobile -->
+                    <div class="flex md:hidden gap-2">
+                        <button onclick="setMode('player')" id="btn-player-mobile" class="px-3 py-1 text-[9px] font-bold uppercase rounded bg-red-600 text-white">Player</button>
+                        <button onclick="setMode('dm')" id="btn-dm-mobile" class="px-3 py-1 text-[9px] font-bold uppercase rounded bg-white/5 text-white/40">DM</button>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4 flex-1 overflow-hidden">
-                    <div class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 shrink-0">
+                    <div class="space-y-3 md:space-y-4">
                         <!-- TARGETING SECTION -->
                         <div>
                             <div class="flex justify-between items-end mb-1.5">
                                 <label id="registry-label" class="text-[9px] font-bold text-white/30 uppercase tracking-widest">Target Selection</label>
-                                <span class="text-[8px] text-white/20 italic">Click "Save" to remember</span>
+                                <span class="text-[8px] text-white/20 italic hidden md:inline">Click "Save" to remember</span>
                             </div>
                             <div class="flex gap-2">
                                 <input id="targetsRaw" type="text" placeholder="e.g. Goblin 1, Orc 2" 
-                                    class="flex-1 bg-black border border-white/10 p-2.5 text-xs outline-none focus:border-red-600 rounded transition-all">
+                                    class="flex-1 bg-black border border-white/10 p-2 md:p-2.5 text-xs outline-none focus:border-red-600 rounded transition-all">
                                 <button onclick="saveTarget()" class="px-3 bg-white/5 border border-white/10 rounded text-[9px] font-bold uppercase hover:bg-red-600 hover:text-white transition-all">
                                     Save
                                 </button>
@@ -78,52 +293,79 @@
                         </div>
 
                         <!-- ACTION NAME SECTION -->
-                        <div class="grid grid-cols-2 gap-2">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <div class="space-y-1">
-                                <label id="label-name" class="text-[9px] font-bold text-white/30 uppercase">Action/Name</label>
+                                <label id="label-name" class="text-[9px] font-bold text-white/30 uppercase tracking-widest">Action / Item Name</label>
                                 <div class="flex flex-col gap-1.5">
-                                    <input id="actionName" type="text" placeholder="Action label" class="w-full bg-black border border-white/10 p-2 text-xs rounded outline-none focus:border-red-600">
-                                    <button onclick="saveCustomCommand()" class="w-full py-1.5 bg-white/5 border border-white/10 rounded text-[8px] font-black uppercase tracking-tighter hover:bg-blue-600 hover:text-white transition-all">
-                                        Save as Command
+                                    <div class="relative">
+                                        <input id="actionName" type="text" placeholder="e.g. Fireball or Bite" class="w-full bg-black border border-white/10 p-2 text-xs rounded outline-none focus:border-red-600">
+                                    </div>
+                                    <button onclick="saveCustomCommand()" class="w-full py-1.5 bg-white/5 border border-white/10 rounded text-[8px] font-black uppercase tracking-tighter hover:bg-blue-600 hover:text-white transition-all tooltip">
+                                        Save as Command <span class="kbd hidden md:inline">Ctrl+S</span>
+                                        <span class="tooltip-text">Save current configuration as reusable command</span>
                                     </button>
                                 </div>
                             </div>
                             <div class="space-y-1">
                                 <label class="text-[9px] font-bold text-white/30 uppercase">Roll MOD</label>
                                 <div class="flex bg-black border border-white/10 rounded overflow-hidden">
-                                    <button onclick="setAdv('normal')" id="mod-normal" class="flex-1 py-1.5 text-[9px] font-black uppercase bg-red-600">N</button>
-                                    <button onclick="setAdv('adv')" id="mod-adv" class="flex-1 py-1.5 text-[9px] font-black uppercase text-white/20">A</button>
-                                    <button onclick="setAdv('dis')" id="mod-dis" class="flex-1 py-1.5 text-[9px] font-black uppercase text-white/20">D</button>
+                                    <button onclick="setAdv('normal')" id="mod-normal" class="flex-1 py-1.5 text-[9px] font-black uppercase bg-red-600 tooltip">
+                                        N
+                                        <span class="tooltip-text">Normal roll</span>
+                                    </button>
+                                    <button onclick="setAdv('adv')" id="mod-adv" class="flex-1 py-1.5 text-[9px] font-black uppercase text-white/20 tooltip">
+                                        A
+                                        <span class="tooltip-text">Advantage - roll twice, take higher</span>
+                                    </button>
+                                    <button onclick="setAdv('dis')" id="mod-dis" class="flex-1 py-1.5 text-[9px] font-black uppercase text-white/20 tooltip">
+                                        D
+                                        <span class="tooltip-text">Disadvantage - roll twice, take lower</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="space-y-4">
+                    <div class="space-y-3 md:space-y-4">
+                        <!-- MANUAL PASTE BOX -->
+                        <div class="space-y-1">
+                            <label class="text-[9px] font-bold text-blue-400 uppercase tracking-widest">Manual Action Paste</label>
+                            <textarea id="manualActionPaste" placeholder="Paste unlisted action name here..." class="w-full h-[68px] bg-black border border-blue-500/20 p-2 text-xs rounded outline-none focus:border-blue-500 transition-all resize-none no-scrollbar"></textarea>
+                            <p class="text-[7px] text-white/20 uppercase tracking-tighter">Overrides "Action/Name" field when typed</p>
+                        </div>
+
                         <div class="space-y-1">
                             <label class="text-[9px] font-bold text-white/30 uppercase">Extra Args / HP Mod</label>
                             <input id="argsInput" type="text" placeholder="e.g. -d 1d6 or -20" class="w-full bg-black border border-white/10 p-2 text-xs rounded outline-none focus:border-red-600">
-                            <p class="text-[8px] text-white/20">Flags or value modifiers</p>
-                        </div>
-                        <div class="p-3 bg-red-600/5 rounded border border-red-600/10 h-24 overflow-y-auto no-scrollbar flex flex-col">
-                            <span class="text-[8px] font-bold text-red-600 uppercase mb-1 block tracking-widest">Live Preview</span>
-                            <p id="live-preview" class="text-[10px] text-white/50 leading-tight italic flex-1">!init list</p>
                         </div>
                     </div>
                 </div>
 
+                <!-- Live Preview -->
+                <div class="mt-3 md:mt-4 p-2 md:p-3 bg-red-600/5 rounded border border-red-600/10 shrink-0">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[8px] font-bold text-red-600 uppercase tracking-widest">Live Preview</span>
+                        <button onclick="explainCommand()" class="text-[8px] font-bold text-blue-500 uppercase hover:text-blue-400 transition-all tooltip">
+                            ? Explain
+                            <span class="tooltip-text">Get breakdown of command syntax</span>
+                        </button>
+                    </div>
+                    <p id="live-preview" class="text-[10px] text-white/50 leading-tight italic truncate">!init list</p>
+                </div>
+
                 <!-- Command Output Area -->
-                <div class="mt-4 bg-[#1a1a1a] border border-white/10 rounded overflow-hidden shadow-xl shrink-0">
+                <div class="mt-2 bg-[#1a1a1a] border border-white/10 rounded overflow-hidden shadow-xl shrink-0">
                     <div class="flex justify-between items-center px-3 py-1.5 bg-white/5 border-b border-white/5">
                         <span class="text-[9px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-2">
                             <span class="h-1 w-1 rounded-full bg-red-600 animate-pulse"></span>
                             Terminal ready
                         </span>
-                        <button onclick="copyCommand()" id="copy-btn" class="px-3 py-1 rounded bg-white/10 text-white hover:bg-white/20 text-[10px] font-bold transition-all">
-                            Copy to Discord
+                        <button onclick="copyCommand()" id="copy-btn" class="px-3 py-1 rounded bg-white/10 text-white hover:bg-white/20 text-[10px] font-bold transition-all tooltip">
+                            Copy <span class="kbd hidden md:inline">Ctrl+Enter</span>
+                            <span class="tooltip-text">Copy command to clipboard</span>
                         </button>
                     </div>
-                    <div id="final-output" class="p-3 mono text-sm break-all text-white/90 bg-black/40">
+                    <div id="final-output" class="p-2 md:p-3 mono text-xs md:text-sm break-all text-white/90 bg-black/40 min-h-[44px] flex items-center">
                         <span class="text-red-600 mr-2">!</span>init list
                     </div>
                 </div>
@@ -131,9 +373,45 @@
         </div>
 
         <!-- Right Panel -->
-        <div class="col-span-4 flex flex-col gap-4 overflow-hidden">
+        <div class="md:col-span-4 flex flex-col gap-2 md:gap-4 overflow-y-auto custom-scrollbar">
+            <!-- Command History -->
+            <div class="bg-[#111] border border-white/5 rounded p-3 md:p-4 shadow-xl shrink-0">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-[10px] font-bold text-purple-500 uppercase tracking-widest">History</h3>
+                    <button onclick="clearHistory()" class="text-[8px] text-white/20 hover:text-red-600 uppercase font-bold">Clear</button>
+                </div>
+                <div id="history-list" class="space-y-1 max-h-32 overflow-y-auto custom-scrollbar">
+                    <!-- History items injected here -->
+                </div>
+            </div>
+
+            <!-- Quick Combat -->
+            <div class="bg-[#111] border border-white/5 rounded p-3 md:p-4 shadow-xl shrink-0">
+                <div class="flex flex-col mb-3">
+                    <h3 class="text-[10px] font-bold text-red-600 uppercase tracking-widest">Quick Combat</h3>
+                    <span class="text-[8px] text-white/20 uppercase tracking-tight">Init & Meta</span>
+                </div>
+                <div id="initiative-grid" class="grid grid-cols-2 gap-2">
+                    <!-- Buttons injected by JS -->
+                </div>
+            </div>
+            
+            <!-- Character/Monster Profiles (DM Only) -->
+            <div id="profiles-section" class="bg-[#111] border border-white/5 rounded p-3 md:p-4 shadow-xl shrink-0" style="display: none;">
+                <div class="flex flex-col mb-2">
+                    <h3 class="text-[10px] font-bold text-green-500 uppercase tracking-widest">Quick Load Profiles</h3>
+                    <span class="text-[8px] text-white/20 uppercase tracking-tight">Pre-configured monsters</span>
+                </div>
+                <div id="profiles-list" class="space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar">
+                    <!-- Profiles injected here -->
+                </div>
+                <button onclick="console.log('Create Profile button clicked!'); createProfile();" class="w-full mt-2 py-1.5 bg-green-600/10 border border-green-600/30 rounded text-[9px] font-bold uppercase hover:bg-green-600 hover:text-white transition-all">
+                    + Create Profile
+                </button>
+            </div>
+            
             <!-- Custom Saves Registry -->
-            <div class="bg-[#111] border border-white/5 rounded p-4 shadow-xl flex flex-col flex-1 overflow-hidden">
+            <div class="bg-[#111] border border-white/5 rounded p-3 md:p-4 shadow-xl flex flex-col shrink-0 min-h-[200px]">
                 <div class="flex flex-col mb-3">
                     <h3 class="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Saved Commands</h3>
                     <span class="text-[8px] text-white/20 uppercase tracking-tight">Full configurations you've saved</span>
@@ -143,49 +421,53 @@
                 </div>
             </div>
 
-            <div class="bg-[#111] border border-white/5 rounded p-4 shadow-xl shrink-0">
-                <div class="flex flex-col mb-3">
-                    <h3 class="text-[10px] font-bold text-red-600 uppercase tracking-widest">Quick Combat</h3>
-                    <span class="text-[8px] text-white/20 uppercase tracking-tight">Init & Meta</span>
+            <div class="bg-[#111] border border-white/5 rounded p-3 md:p-4 shrink-0">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-[9px] font-bold text-white/40 uppercase">Flag Reference</h3>
+                    <button onclick="toggleShortcuts()" class="text-[8px] text-white/20 hover:text-white uppercase font-bold tooltip">
+                        <span id="shortcuts-toggle-text">Show</span> Keys
+                        <span class="tooltip-text">Toggle keyboard shortcuts reference</span>
+                    </button>
                 </div>
-                <div id="initiative-grid" class="grid grid-cols-2 gap-2">
-                    <!-- Buttons injected by JS -->
-                </div>
-            </div>
-
-            <div class="bg-[#111] border border-white/5 rounded p-4 h-28 overflow-hidden flex flex-col">
-                <div id="cheat-sheet" class="space-y-1 text-[10px] text-white/50 overflow-y-auto pr-1 custom-scrollbar">
+                <div id="cheat-sheet" class="space-y-1 text-[10px] text-white/50 max-h-24 overflow-y-auto pr-1 custom-scrollbar">
                     <!-- Flags injected by JS -->
+                </div>
+                <div id="keyboard-shortcuts" class="hidden space-y-1 text-[10px] text-white/50 max-h-24 overflow-y-auto pr-1 custom-scrollbar">
+                    <!-- Shortcuts injected by JS -->
                 </div>
             </div>
         </div>
     </main>
 
-    <footer class="h-6 px-6 flex items-center bg-red-600/5 border-t border-white/5 text-[9px] font-bold text-white/20 gap-4 shrink-0">
+    <footer class="h-6 px-4 md:px-6 flex items-center bg-red-600/5 border-t border-white/5 text-[9px] font-bold text-white/20 gap-4 shrink-0">
         <div class="flex items-center gap-1">
             <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-            <span>Tip: The "Save" buttons next to inputs store items permanently.</span>
+            <span class="hidden sm:inline">Tip: Paste any text into the blue box for unlisted monster actions.</span>
+            <span class="sm:hidden">Swipe right for menu</span>
         </div>
+        <button onclick="console.log('Test button clicked'); createProfile();" class="ml-auto px-2 py-1 bg-green-600/20 hover:bg-green-600 rounded text-white/60 hover:text-white transition-all">
+            🧪 Test Create Profile
+        </button>
     </footer>
 
     <script>
         // --- Data ---
         const PLAYER_ACTIONS = [
-            { id: 'attack', name: 'Attack', syntax: '!a "{name}" {targets} {args}' },
-            { id: 'cast', name: 'Spell', syntax: '!cast "{name}" {targets} {args}' },
-            { id: 'check', name: 'Check', syntax: '!check {name} {args}' },
-            { id: 'save', name: 'Save', syntax: '!save {name} {args}' },
-            { id: 'init', name: 'Join Init', syntax: '!init join' },
-            { id: 'list', name: 'Show List', syntax: '!init list' },
+            { id: 'attack', name: 'Attack', syntax: '!a "{name}" {targets} {args}', description: 'Make a weapon or unarmed attack' },
+            { id: 'cast', name: 'Spell', syntax: '!cast "{name}" {targets} {args}', description: 'Cast a spell from your character sheet' },
+            { id: 'check', name: 'Check', syntax: '!check {name} {args}', description: 'Make an ability check or skill check' },
+            { id: 'save', name: 'Save', syntax: '!save {name} {args}', description: 'Make a saving throw' },
+            { id: 'init', name: 'Join Init', syntax: '!init join', description: 'Join initiative tracker' },
+            { id: 'list', name: 'Show List', syntax: '!init list', description: 'Display initiative order' },
         ];
 
         const DM_GOALS = [
-            { id: 'madd', name: 'Add Mob', syntax: '!init madd "{name}" -n {count} {args}' },
-            { id: 'mattack', name: 'Mob Atk', syntax: '!init attack "{name}" "{attack}" {targets}' },
-            { id: 'effect', name: 'Effect', syntax: '!init effect "{targets}" "{name}" -d {args}' },
-            { id: 'hpmod', name: 'Set HP', syntax: '!init hp "{targets}" {args}' },
-            { id: 'end-init', name: 'End Combat', syntax: '!init end' },
-            { id: 'next', name: 'Next Turn', syntax: '!init next' },
+            { id: 'madd', name: 'Add Mob', syntax: '!init madd "{name}" -n {count} {args}', description: 'Add multiple monsters to initiative' },
+            { id: 'mattack', name: 'Mob Atk', syntax: '!init attack "{name}" "{attack}" {targets}', description: 'Monster attacks player' },
+            { id: 'effect', name: 'Effect', syntax: '!init effect "{targets}" "{name}" -d {args}', description: 'Apply status effect to target' },
+            { id: 'hpmod', name: 'Set HP', syntax: '!init hp "{targets}" {args}', description: 'Modify target hit points' },
+            { id: 'end-init', name: 'End Combat', syntax: '!init end', description: 'End initiative tracker' },
+            { id: 'next', name: 'Next Turn', syntax: '!init next', description: 'Advance to next turn' },
         ];
 
         const CATEGORIES = {
@@ -202,25 +484,102 @@
         };
 
         const CHEAT_SHEET = [
-            ["-h", "Hidden"], ["-crit", "Crit"], ["-d", "Damage"], ["-rr", "Repeat"], ["-i", "Ignore"]
+            ["-h", "Hidden", "Make roll secret from players"],
+            ["-crit", "Crit", "Force critical hit"],
+            ["-d", "Damage", "Add extra damage dice"],
+            ["-rr", "Repeat", "Reroll certain dice"],
+            ["-i", "Ignore", "Ignore resistances"]
         ];
 
-        // --- State ---
+        const KEYBOARD_SHORTCUTS = [
+            ["Ctrl+Enter", "Copy command"],
+            ["Ctrl+S", "Save command"],
+            ["Ctrl+K", "Focus search"],
+            ["1-6", "Quick action select"],
+            ["Esc", "Clear search"]
+        ];
+
+        const DEFAULT_PROFILES = [
+            { name: "Goblin Pack", type: "dm", actions: ["Scimitar", "Shortbow"], stats: "-n 4", description: "4 goblins with standard weapons" },
+            { name: "Orc Warriors", type: "dm", actions: ["Greataxe", "Javelin"], stats: "-n 3", description: "3 orc melee fighters" },
+            { name: "Skeleton Horde", type: "dm", actions: ["Shortsword", "Shortbow"], stats: "-n 6", description: "6 undead skeletons" },
+            { name: "Dragon Wyrmling", type: "dm", actions: ["Bite", "Breath Weapon"], stats: "-n 1", description: "Young dragon encounter" }
+        ];
+
         let currentMode = 'player';
         let selectedActionId = 'attack';
         let selectedAdv = 'normal';
         let savedTargets = JSON.parse(localStorage.getItem('avrae-targets') || '[]');
         let customCommands = JSON.parse(localStorage.getItem('avrae-custom') || '[]');
         let dmPlayers = JSON.parse(localStorage.getItem('avrae-dm-players') || '[]');
+        let commandHistory = JSON.parse(localStorage.getItem('avrae-history') || '[]');
+        
+        // Initialize profiles - check if exists in localStorage, otherwise use defaults
+        let profiles = [];
+        try {
+            const storedProfiles = localStorage.getItem('avrae-profiles');
+            if (storedProfiles) {
+                profiles = JSON.parse(storedProfiles);
+            } else {
+                profiles = DEFAULT_PROFILES;
+                localStorage.setItem('avrae-profiles', JSON.stringify(profiles));
+            }
+        } catch (e) {
+            profiles = DEFAULT_PROFILES;
+            localStorage.setItem('avrae-profiles', JSON.stringify(profiles));
+        }
+        
+        let currentTheme = localStorage.getItem('avrae-theme') || 'dark';
+        let searchQuery = '';
+
+        // --- Theme Management ---
+        function toggleTheme() {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('avrae-theme', currentTheme);
+            applyTheme();
+        }
+
+        function applyTheme() {
+            if (currentTheme === 'light') {
+                document.body.classList.add('light-theme');
+                document.getElementById('theme-icon-dark').classList.add('hidden');
+                document.getElementById('theme-icon-light').classList.remove('hidden');
+            } else {
+                document.body.classList.remove('light-theme');
+                document.getElementById('theme-icon-dark').classList.remove('hidden');
+                document.getElementById('theme-icon-light').classList.add('hidden');
+            }
+        }
 
         // --- Core UI Logic ---
         function setMode(mode) {
             currentMode = mode;
+            // Desktop buttons
             document.getElementById('btn-player').className = mode === 'player' ? 'text-[11px] font-bold uppercase tracking-widest transition-colors text-white border-b-2 border-red-600 pb-1' : 'text-[11px] font-bold uppercase tracking-widest transition-colors text-white/40 hover:text-white';
             document.getElementById('btn-dm').className = mode === 'dm' ? 'text-[11px] font-bold uppercase tracking-widest transition-colors text-white border-b-2 border-red-600 pb-1' : 'text-[11px] font-bold uppercase tracking-widest transition-colors text-white/40 hover:text-white';
             
-            document.getElementById('label-name').textContent = mode === 'player' ? 'Action/Name' : 'Creature/Effect';
-            document.getElementById('registry-label').textContent = mode === 'player' ? 'Target Registry' : 'Player Registry';
+            // Mobile buttons
+            document.getElementById('btn-player-mobile').className = mode === 'player' ? 'px-3 py-1 text-[9px] font-bold uppercase rounded bg-red-600 text-white' : 'px-3 py-1 text-[9px] font-bold uppercase rounded bg-white/5 text-white/40';
+            document.getElementById('btn-dm-mobile').className = mode === 'dm' ? 'px-3 py-1 text-[9px] font-bold uppercase rounded bg-red-600 text-white' : 'px-3 py-1 text-[9px] font-bold uppercase rounded bg-white/5 text-white/40';
+            
+            document.getElementById('label-name').textContent = mode === 'player' ? 'Action / Item Name' : 'Creature / Effect';
+            document.getElementById('registry-label').textContent = mode === 'player' ? 'Who is your target?' : 'Who is your target?';
+            
+            // Update placeholder text based on mode
+            const targetsInput = document.getElementById('targetsRaw');
+            if (mode === 'player') {
+                targetsInput.placeholder = 'e.g. Goblin 1, Orc 2';
+            } else {
+                targetsInput.placeholder = 'e.g. Player 1, Player 2';
+            }
+            
+            // Show/hide profiles section based on mode
+            const profilesSection = document.getElementById('profiles-section');
+            if (mode === 'dm') {
+                profilesSection.style.display = 'block';
+            } else {
+                profilesSection.style.display = 'none';
+            }
             
             selectedActionId = mode === 'player' ? 'attack' : 'madd';
             
@@ -228,27 +587,23 @@
             renderInitiativeGrid();
             renderRegistry();
             renderCustomCommands();
+            renderProfiles();
             updateOutput();
         }
 
         function setAdv(mod) {
             selectedAdv = mod;
             ['normal', 'adv', 'dis'].forEach(m => {
-                document.getElementById(`mod-${m}`).className = `flex-1 py-1.5 text-[9px] font-black uppercase transition-colors ${selectedAdv === m ? 'bg-red-600 text-white' : 'text-white/20 hover:text-white/40'}`;
+                document.getElementById(`mod-${m}`).className = `flex-1 py-1.5 text-[9px] font-black uppercase transition-colors tooltip ${selectedAdv === m ? 'bg-red-600 text-white' : 'text-white/20 hover:text-white/40'}`;
             });
             updateOutput();
         }
 
-        // --- SAVING PLAYERS & TARGETS ---
         function saveTarget() {
             const input = document.getElementById('targetsRaw').value.trim();
             if(!input) return;
-            
-            // If DM mode, we save to dm-players. If Player mode, we save to avrae-targets.
             const key = currentMode === 'player' ? 'avrae-targets' : 'avrae-dm-players';
             let list = currentMode === 'player' ? savedTargets : dmPlayers;
-            
-            // Avoid duplicates
             if(!list.includes(input)) {
                 list.push(input);
                 if (currentMode === 'player') savedTargets = list; else dmPlayers = list;
@@ -272,14 +627,15 @@
         function renderRegistry() {
             const container = document.getElementById('target-registry');
             const list = currentMode === 'player' ? savedTargets : dmPlayers;
-            container.innerHTML = list.length ? '' : `<span class="text-[8px] text-white/10 italic">Registry Empty. Type a name above and click Save.</span>`;
+            const filtered = searchQuery ? list.filter(t => t.toLowerCase().includes(searchQuery.toLowerCase())) : list;
             
-            list.forEach(t => {
+            container.innerHTML = filtered.length ? '' : `<span class="text-[8px] text-white/10 italic">Registry Empty. Save names above.</span>`;
+            filtered.forEach(t => {
                 const badge = document.createElement('div');
                 badge.className = "flex items-center bg-white/5 rounded border border-white/5 overflow-hidden group hover:border-red-600/40 transition-all";
                 badge.innerHTML = `
-                    <button class="px-2 py-0.5 text-[9px] font-bold text-white/40 hover:text-white truncate max-w-[100px]" onclick="applyTarget('${t}')">${t}</button>
-                    <button class="px-1.5 py-0.5 bg-red-600/10 hover:bg-red-600 text-white/30 hover:text-white transition-all border-l border-white/5" onclick="deleteTarget(event, '${t}')">×</button>
+                    <button class="px-2 py-0.5 text-[9px] font-bold text-white/40 hover:text-white truncate max-w-[100px]" onclick="applyTarget('${t.replace(/'/g, "\\'")}')">${t}</button>
+                    <button class="px-1.5 py-0.5 bg-red-600/10 hover:bg-red-600 text-white/30 hover:text-white transition-all border-l border-white/5" onclick="deleteTarget(event, '${t.replace(/'/g, "\\'")}')" title="Remove">×</button>
                 `;
                 container.appendChild(badge);
             });
@@ -293,12 +649,254 @@
             updateOutput();
         }
 
-        // --- SAVING COMMANDS ---
+        // --- Command History ---
+        function addToHistory(cmd) {
+            if (!cmd || cmd === '!init list') return;
+            commandHistory = [cmd, ...commandHistory.filter(c => c !== cmd)].slice(0, 20);
+            localStorage.setItem('avrae-history', JSON.stringify(commandHistory));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('history-list');
+            const filtered = searchQuery ? commandHistory.filter(h => h.toLowerCase().includes(searchQuery.toLowerCase())) : commandHistory;
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<span class="text-[8px] text-white/10 italic">No history yet</span>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            filtered.slice(0, 10).forEach((cmd, idx) => {
+                const div = document.createElement('div');
+                div.className = "flex items-center gap-1 p-1.5 bg-white/5 rounded border border-white/5 hover:border-purple-500/30 group text-[9px]";
+                div.innerHTML = `
+                    <button onclick="loadFromHistory('${cmd.replace(/'/g, "\\'")}')" class="flex-1 text-left text-white/60 hover:text-white truncate mono">${cmd}</button>
+                    <button onclick="copyFromHistory('${cmd.replace(/'/g, "\\'")}')" class="opacity-0 group-hover:opacity-100 px-1 text-white/30 hover:text-purple-500" title="Copy">⎘</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function loadFromHistory(cmd) {
+            document.getElementById('live-preview').textContent = cmd;
+            document.getElementById('final-output').innerHTML = `<span class="text-red-600 mr-2">!</span>${cmd.startsWith('!') ? cmd.slice(1) : cmd}`;
+        }
+
+        function copyFromHistory(cmd) {
+            navigator.clipboard.writeText(cmd).catch(() => {
+                const textArea = document.createElement("textarea");
+                textArea.value = cmd;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+            });
+        }
+
+        function clearHistory() {
+            if (confirm('Clear all command history?')) {
+                commandHistory = [];
+                localStorage.setItem('avrae-history', JSON.stringify(commandHistory));
+                renderHistory();
+            }
+        }
+
+        // --- Profiles ---
+        function renderProfiles() {
+            const container = document.getElementById('profiles-list');
+            const filtered = profiles.filter(p => {
+                if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+                return p.type === 'dm'; // Only show DM profiles
+            });
+            
+            container.innerHTML = '';
+            if (filtered.length === 0) {
+                container.innerHTML = '<span class="text-[8px] text-white/10 italic">No profiles yet</span>';
+                return;
+            }
+            
+            filtered.forEach(profile => {
+                const div = document.createElement('div');
+                div.className = "p-2 bg-white/5 rounded border border-white/5 hover:border-green-500/30 transition-all group";
+                
+                // Create content div (clickable)
+                const contentDiv = document.createElement('div');
+                contentDiv.className = "flex justify-between items-start cursor-pointer";
+                contentDiv.onclick = () => loadProfile(profile);
+                
+                contentDiv.innerHTML = `
+                    <div class="flex-1">
+                        <div class="text-[10px] font-bold text-white/80">${profile.name}</div>
+                        <div class="text-[8px] text-white/30">${profile.description || profile.actions.join(', ')}</div>
+                    </div>
+                `;
+                
+                // Create delete button separately (not clickable for loading)
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = "opacity-0 group-hover:opacity-100 text-white/20 hover:text-red-600 px-1";
+                deleteBtn.title = "Delete";
+                deleteBtn.textContent = "×";
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteProfile(profile.name);
+                };
+                
+                contentDiv.appendChild(deleteBtn);
+                div.appendChild(contentDiv);
+                container.appendChild(div);
+            });
+        }
+
+        function loadProfile(profile) {
+            if (profile.type !== currentMode) {
+                setMode(profile.type);
+            }
+            if (profile.actions && profile.actions.length > 0) {
+                document.getElementById('actionName').value = profile.actions[0];
+            }
+            if (profile.stats) {
+                document.getElementById('argsInput').value = profile.stats;
+            }
+            updateOutput();
+        }
+
+        function createProfile() {
+            try {
+                console.log('Opening profile creation modal');
+                
+                // Get current form values to show in modal
+                const actionNameEl = document.getElementById('actionName');
+                const argsInputEl = document.getElementById('argsInput');
+                
+                const currentAction = actionNameEl ? actionNameEl.value.trim() : '';
+                const currentStats = argsInputEl ? argsInputEl.value.trim() : '';
+                
+                // Update modal with current values
+                document.getElementById('modal-current-action').textContent = currentAction || 'None';
+                document.getElementById('modal-current-stats').textContent = currentStats || 'None';
+                
+                // Clear previous inputs
+                document.getElementById('modal-profile-name').value = '';
+                document.getElementById('modal-profile-description').value = '';
+                
+                // Show modal
+                const modal = document.getElementById('profile-modal');
+                modal.classList.remove('hidden');
+                
+                // Focus on name input
+                setTimeout(() => {
+                    document.getElementById('modal-profile-name').focus();
+                }, 100);
+                
+            } catch (error) {
+                console.error('Error opening profile modal:', error);
+                alert('An error occurred while opening the profile creation dialog: ' + error.message);
+            }
+        }
+        
+        function closeProfileModal() {
+            const modal = document.getElementById('profile-modal');
+            modal.classList.add('hidden');
+        }
+        
+        function saveProfileFromModal() {
+            try {
+                console.log('=== saveProfileFromModal started ===');
+                
+                const nameInput = document.getElementById('modal-profile-name');
+                const descriptionInput = document.getElementById('modal-profile-description');
+                
+                const name = nameInput.value.trim();
+                const description = descriptionInput.value.trim();
+                
+                console.log('Name:', name);
+                console.log('Description:', description);
+                
+                if (!name) {
+                    alert('Please enter a profile name');
+                    nameInput.focus();
+                    return;
+                }
+                
+                const actionNameEl = document.getElementById('actionName');
+                const argsInputEl = document.getElementById('argsInput');
+                
+                const actions = actionNameEl ? actionNameEl.value.trim() : '';
+                const stats = argsInputEl ? argsInputEl.value.trim() : '';
+                
+                console.log('Actions:', actions, 'Stats:', stats);
+                
+                const profile = {
+                    name: name,
+                    type: 'dm',
+                    actions: actions ? [actions] : [],
+                    stats: stats,
+                    description: description
+                };
+                
+                console.log('Profile object created:', JSON.stringify(profile));
+                
+                // Ensure profiles is an array
+                if (!Array.isArray(profiles)) {
+                    console.warn('Profiles is not an array, resetting to empty array');
+                    profiles = [];
+                }
+                
+                console.log('Profiles before push:', profiles.length, 'items');
+                profiles.push(profile);
+                console.log('Profiles after push:', profiles.length, 'items');
+                
+                // Save to localStorage
+                try {
+                    localStorage.setItem('avrae-profiles', JSON.stringify(profiles));
+                    console.log('Successfully saved to localStorage');
+                } catch (storageError) {
+                    console.error('Error saving to localStorage:', storageError);
+                    alert('Error saving profile: ' + storageError.message);
+                    return;
+                }
+                
+                // Close modal
+                closeProfileModal();
+                
+                // Render the updated profiles list
+                console.log('Calling renderProfiles()');
+                renderProfiles();
+                
+                // Show success message
+                alert(`Profile "${name}" created successfully!`);
+                console.log('=== saveProfileFromModal completed successfully ===');
+                
+            } catch (error) {
+                console.error('Error in saveProfileFromModal:', error);
+                alert('An error occurred while creating the profile: ' + error.message);
+            }
+        }
+
+        function deleteProfile(name) {
+            if (confirm(`Delete profile "${name}"?`)) {
+                console.log('Deleting profile:', name);
+                const beforeLength = profiles.length;
+                profiles = profiles.filter(p => p.name !== name);
+                console.log('Profiles before:', beforeLength, 'after:', profiles.length);
+                localStorage.setItem('avrae-profiles', JSON.stringify(profiles));
+                renderProfiles();
+                console.log('Profile deleted successfully');
+            }
+        }
+
+        // --- Custom Commands ---
         function saveCustomCommand() {
-            const name = document.getElementById('actionName').value.trim();
+            const nameField = document.getElementById('actionName').value.trim();
+            const pasteField = document.getElementById('manualActionPaste').value.trim();
+            const name = pasteField || nameField;
             const args = document.getElementById('argsInput').value.trim();
             const targets = document.getElementById('targetsRaw').value.trim();
-            if (!name) return;
+            if (!name) {
+                alert('Please enter an action name');
+                return;
+            }
 
             const cmd = { 
                 id: Date.now(), 
@@ -306,21 +904,33 @@
                 args, 
                 targets, 
                 type: currentMode, 
-                actionId: selectedActionId,
+                actionId: selectedActionId, 
                 adv: selectedAdv 
             };
             customCommands.push(cmd);
             localStorage.setItem('avrae-custom', JSON.stringify(customCommands));
             renderCustomCommands();
+            
+            // Show confirmation
+            const btn = document.querySelector('button[onclick="saveCustomCommand()"]');
+            const original = btn.textContent;
+            btn.textContent = '✓ Saved!';
+            setTimeout(() => { btn.innerHTML = original + ' <span class="kbd hidden md:inline">Ctrl+S</span>'; }, 2000);
         }
 
         function deleteCustom(id) {
-            customCommands = customCommands.filter(c => c.id !== id);
-            localStorage.setItem('avrae-custom', JSON.stringify(customCommands));
-            renderCustomCommands();
+            if (confirm('Delete this saved command?')) {
+                customCommands = customCommands.filter(c => c.id !== id);
+                localStorage.setItem('avrae-custom', JSON.stringify(customCommands));
+                renderCustomCommands();
+            }
         }
 
         function loadCustom(cmd) {
+            if (cmd.type !== currentMode) {
+                setMode(cmd.type);
+            }
+            document.getElementById('manualActionPaste').value = '';
             document.getElementById('actionName').value = cmd.name;
             document.getElementById('argsInput').value = cmd.args || '';
             document.getElementById('targetsRaw').value = cmd.targets || '';
@@ -331,49 +941,78 @@
 
         function renderCustomCommands() {
             const container = document.getElementById('custom-registry');
+            const filtered = searchQuery ? customCommands.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase())) : customCommands;
+            
             container.innerHTML = '';
-            if (customCommands.length === 0) {
-                container.innerHTML = '<span class="text-[8px] text-white/10 italic">No saved commands yet. Configure an action and click "Save as Command".</span>';
+            if (filtered.length === 0) {
+                container.innerHTML = '<span class="text-[8px] text-white/10 italic">No saved commands.</span>';
             }
-            customCommands.forEach(cmd => {
+            filtered.forEach(cmd => {
                 const div = document.createElement('div');
                 div.className = "flex items-center justify-between p-2 bg-white/5 rounded border border-white/5 hover:border-blue-500/30 transition-all group";
+                
+                // Escape the JSON for onclick
+                const cmdJson = JSON.stringify(cmd).replace(/"/g, '&quot;');
+                
                 div.innerHTML = `
-                    <div class="flex flex-col cursor-pointer flex-1" onclick='loadCustom(${JSON.stringify(cmd)})'>
+                    <div class="flex flex-col cursor-pointer flex-1" onclick='loadCustom(${cmdJson})'>
                         <span class="text-[10px] font-bold text-white/80">${cmd.name}</span>
                         <span class="text-[8px] text-white/30 uppercase tracking-tighter">${cmd.actionId} • ${cmd.type}</span>
                     </div>
-                    <button onclick="deleteCustom(${cmd.id})" class="opacity-0 group-hover:opacity-100 px-2 py-1 text-white/20 hover:text-red-600 transition-all text-sm">×</button>
+                    <button onclick="deleteCustom(${cmd.id})" class="opacity-0 group-hover:opacity-100 px-2 py-1 text-white/20 hover:text-red-600 transition-all text-sm" title="Delete">×</button>
                 `;
                 container.appendChild(div);
             });
         }
 
-        // --- Rendering Helpers ---
+        // --- Search ---
+        function handleSearch() {
+            searchQuery = document.getElementById('search-input').value.trim();
+            renderRegistry();
+            renderCustomCommands();
+            renderProfiles();
+            renderHistory();
+            renderShortcuts();
+        }
+
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            searchQuery = '';
+            handleSearch();
+        }
+
+        function toggleSearch() {
+            const searchBar = document.getElementById('search-bar');
+            searchBar.classList.toggle('hidden');
+            if (!searchBar.classList.contains('hidden')) {
+                document.getElementById('search-input').focus();
+            }
+        }
+
+        // --- Shortcuts & Rendering ---
         function renderShortcuts() {
             const container = document.getElementById('quick-clicks-container');
             container.innerHTML = '';
             const data = CATEGORIES[currentMode];
             for (const [cat, items] of Object.entries(data)) {
+                const filtered = searchQuery ? items.filter(i => i.toLowerCase().includes(searchQuery.toLowerCase())) : items;
+                if (filtered.length === 0) continue;
+                
                 const wrap = document.createElement('div');
                 wrap.className = "flex flex-col gap-1";
                 wrap.innerHTML = `<h2 class="text-[9px] font-bold text-white/30 uppercase tracking-widest ml-1">${cat}</h2>`;
                 const scrollWrap = document.createElement('div');
                 scrollWrap.className = "flex gap-2 overflow-x-auto no-scrollbar pb-1";
-                items.forEach(item => {
+                filtered.forEach(item => {
                     const btn = document.createElement('button');
                     btn.className = "flex-shrink-0 px-3 py-1 bg-[#141414] border border-white/5 rounded text-[10px] font-bold hover:bg-red-600/10 hover:border-red-600/40 transition-all text-white/70";
                     btn.textContent = item;
                     btn.onclick = () => {
-                        if (currentMode === 'player' && cat === "Skills") {
-                            selectedActionId = 'check';
-                        } else if (currentMode === 'player' && cat === "Spells") {
-                            selectedActionId = 'cast';
-                        } else if (currentMode === 'dm' && cat === "Attacks") {
-                            selectedActionId = 'mattack';
-                        } else if (currentMode === 'dm' && cat === "Statuses") {
-                            selectedActionId = 'effect';
-                        }
+                        if (currentMode === 'player' && cat === "Skills") selectedActionId = 'check';
+                        else if (currentMode === 'player' && cat === "Common Spells") selectedActionId = 'cast';
+                        else if (currentMode === 'dm' && cat === "Attacks") selectedActionId = 'mattack';
+                        else if (currentMode === 'dm' && cat === "Statuses") selectedActionId = 'effect';
+                        document.getElementById('manualActionPaste').value = '';
                         document.getElementById('actionName').value = item;
                         updateOutput();
                     };
@@ -388,18 +1027,27 @@
             const container = document.getElementById('initiative-grid');
             container.innerHTML = '';
             const list = currentMode === 'player' ? PLAYER_ACTIONS : DM_GOALS;
-            list.forEach(item => {
+            list.forEach((item, idx) => {
                 const btn = document.createElement('button');
-                btn.className = "p-2 bg-white/5 border border-white/5 rounded hover:border-red-600 transition-all text-center";
-                btn.innerHTML = `<span class="text-[8px] font-black uppercase text-white/60">${item.name}</span>`;
+                btn.className = "p-2 bg-white/5 border border-white/5 rounded hover:border-red-600 transition-all text-center tooltip";
+                btn.innerHTML = `
+                    <span class="text-[8px] font-black uppercase text-white/60">${item.name}</span>
+                    <span class="tooltip-text">${item.description}</span>
+                `;
                 btn.onclick = () => { selectedActionId = item.id; updateOutput(); };
+                // Keyboard shortcut
+                if (idx < 6) {
+                    btn.setAttribute('data-key', idx + 1);
+                }
                 container.appendChild(btn);
             });
         }
 
         function updateOutput() {
             const targetsRaw = document.getElementById('targetsRaw').value.trim();
-            const actionName = document.getElementById('actionName').value.trim();
+            const manualPaste = document.getElementById('manualActionPaste').value.trim();
+            const actionNameInput = document.getElementById('actionName').value.trim();
+            const actionName = manualPaste || actionNameInput;
             const args = document.getElementById('argsInput').value.trim();
             
             const targetList = targetsRaw.split(',').map(t => t.trim()).filter(t => t);
@@ -434,36 +1082,231 @@
         function copyCommand() {
             const text = document.getElementById('live-preview').textContent;
             const btn = document.getElementById('copy-btn');
-            const textArea = document.createElement("textarea");
-            textArea.value = text;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textArea);
             
-            const original = btn.textContent;
-            btn.textContent = 'Copied!';
-            btn.classList.add('bg-red-600');
-            setTimeout(() => {
-                btn.textContent = original;
-                btn.classList.remove('bg-red-600');
-            }, 2000);
+            navigator.clipboard.writeText(text).then(() => {
+                addToHistory(text);
+                
+                const original = btn.innerHTML;
+                btn.innerHTML = 'Copied!';
+                btn.classList.add('bg-red-600');
+                setTimeout(() => {
+                    btn.innerHTML = original;
+                    btn.classList.remove('bg-red-600');
+                }, 2000);
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                addToHistory(text);
+            });
+        }
+
+        function explainCommand() {
+            const cmd = document.getElementById('live-preview').textContent;
+            let explanation = "Command Breakdown:\n\n";
+            
+            const parts = cmd.split(' ');
+            parts.forEach(part => {
+                if (part.startsWith('!')) {
+                    explanation += `${part} - Base command\n`;
+                } else if (part.startsWith('-t')) {
+                    explanation += `-t - Target flag (specifies who is affected)\n`;
+                } else if (part.startsWith('-d')) {
+                    explanation += `-d - Damage/duration modifier\n`;
+                } else if (part.startsWith('-n')) {
+                    explanation += `-n - Number/count modifier\n`;
+                } else if (part === 'adv') {
+                    explanation += `adv - Roll with advantage\n`;
+                } else if (part === 'dis') {
+                    explanation += `dis - Roll with disadvantage\n`;
+                } else if (part.startsWith('"')) {
+                    explanation += `"..." - Name or string parameter\n`;
+                }
+            });
+            
+            alert(explanation);
+        }
+
+        // --- Mobile ---
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            const overlay = document.getElementById('mobile-overlay');
+            menu.classList.toggle('active');
+            overlay.classList.toggle('active');
+            
+            if (menu.classList.contains('active')) {
+                renderMobileMenu();
+            }
+        }
+
+        function closeMobileMenu() {
+            document.getElementById('mobile-menu').classList.remove('active');
+            document.getElementById('mobile-overlay').classList.remove('active');
+        }
+
+        function renderMobileMenu() {
+            const container = document.getElementById('mobile-menu-content');
+            container.innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-white/80 mb-2">Quick Actions</h3>
+                        <div id="mobile-quick-actions" class="space-y-2"></div>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white/80 mb-2">Keyboard Shortcuts</h3>
+                        <div class="space-y-1 text-xs text-white/60">
+                            ${KEYBOARD_SHORTCUTS.map(([key, desc]) => `
+                                <div class="flex justify-between border-b border-white/5 pb-1">
+                                    <span class="kbd">${key}</span>
+                                    <span>${desc}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const actionsContainer = document.getElementById('mobile-quick-actions');
+            const actions = currentMode === 'player' ? PLAYER_ACTIONS : DM_GOALS;
+            actions.forEach(action => {
+                const btn = document.createElement('button');
+                btn.className = "w-full p-3 bg-white/5 rounded border border-white/5 text-left";
+                btn.innerHTML = `
+                    <div class="text-sm font-bold text-white/80">${action.name}</div>
+                    <div class="text-xs text-white/40">${action.description}</div>
+                `;
+                btn.onclick = () => {
+                    selectedActionId = action.id;
+                    updateOutput();
+                    closeMobileMenu();
+                };
+                actionsContainer.appendChild(btn);
+            });
+        }
+
+        // --- Keyboard Shortcuts ---
+        document.addEventListener('keydown', (e) => {
+            // Enter key in profile modal
+            if (!document.getElementById('profile-modal').classList.contains('hidden')) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    saveProfileFromModal();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    closeProfileModal();
+                }
+                return; // Don't process other shortcuts when modal is open
+            }
+            
+            // Ctrl+Enter - Copy command
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                copyCommand();
+            }
+            // Ctrl+S - Save command
+            else if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveCustomCommand();
+            }
+            // Ctrl+K - Focus search
+            else if (e.ctrlKey && e.key === 'k') {
+                e.preventDefault();
+                document.getElementById('search-input').focus();
+                const searchBar = document.getElementById('search-bar');
+                searchBar.classList.remove('hidden');
+            }
+            // Escape - Clear search
+            else if (e.key === 'Escape') {
+                clearSearch();
+            }
+            // Number keys 1-6 for quick action
+            else if (e.key >= '1' && e.key <= '6' && !e.ctrlKey && !e.altKey) {
+                const target = document.activeElement;
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+                    const idx = parseInt(e.key) - 1;
+                    const actions = currentMode === 'player' ? PLAYER_ACTIONS : DM_GOALS;
+                    if (actions[idx]) {
+                        selectedActionId = actions[idx].id;
+                        updateOutput();
+                    }
+                }
+            }
+        });
+
+        // --- Toggle Shortcuts Display ---
+        function toggleShortcuts() {
+            const cheatSheet = document.getElementById('cheat-sheet');
+            const shortcuts = document.getElementById('keyboard-shortcuts');
+            const toggleText = document.getElementById('shortcuts-toggle-text');
+            
+            if (cheatSheet.classList.contains('hidden')) {
+                cheatSheet.classList.remove('hidden');
+                shortcuts.classList.add('hidden');
+                toggleText.textContent = 'Show';
+            } else {
+                cheatSheet.classList.add('hidden');
+                shortcuts.classList.remove('hidden');
+                toggleText.textContent = 'Hide';
+            }
+        }
+
+        // Event Listeners
+        ['targetsRaw', 'actionName', 'argsInput', 'manualActionPaste'].forEach(id => {
+            document.getElementById(id).oninput = updateOutput;
+        });
+
+        // Touch gestures for mobile
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        document.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+
+        document.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        });
+
+        function handleSwipe() {
+            if (touchEndX - touchStartX > 100) {
+                // Swipe right - open menu
+                if (window.innerWidth < 768) {
+                    toggleMobileMenu();
+                }
+            }
         }
 
         // Init UI
         const cheatContainer = document.getElementById('cheat-sheet');
-        CHEAT_SHEET.forEach(([flag, desc]) => {
+        CHEAT_SHEET.forEach(([flag, name, desc]) => {
             const row = document.createElement('div');
-            row.className = "flex justify-between border-b border-white/5 pb-1 group hover:text-white transition-colors";
-            row.innerHTML = `<span>${flag}</span> <span class="text-white/20 uppercase text-[8px]">${desc}</span>`;
+            row.className = "flex justify-between border-b border-white/5 pb-1 text-[8px] uppercase tracking-tighter tooltip";
+            row.innerHTML = `
+                <span class="text-white/40">${flag}</span>
+                <span class="text-white/20">${name}</span>
+                <span class="tooltip-text">${desc}</span>
+            `;
             cheatContainer.appendChild(row);
         });
 
-        document.getElementById('targetsRaw').oninput = updateOutput;
-        document.getElementById('actionName').oninput = updateOutput;
-        document.getElementById('argsInput').oninput = updateOutput;
+        const shortcutsContainer = document.getElementById('keyboard-shortcuts');
+        KEYBOARD_SHORTCUTS.forEach(([key, desc]) => {
+            const row = document.createElement('div');
+            row.className = "flex justify-between border-b border-white/5 pb-1 text-[8px] uppercase tracking-tighter";
+            row.innerHTML = `<span class="kbd">${key}</span> <span class="text-white/20">${desc}</span>`;
+            shortcutsContainer.appendChild(row);
+        });
 
+        // Initialize
+        applyTheme();
         setMode('player');
+        renderHistory();
+        renderProfiles();
     </script>
 </body>
 </html>
